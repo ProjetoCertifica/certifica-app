@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <defs>
+    <linearGradient id="ribbon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3a9fc4"/>
+      <stop offset="100%" stop-color="#1F7490"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" fill="white"/>
+  <!-- Fita com dobra (símbolo da logo) -->
+  <path d="M8 10.4c0-.6.4-1.1.9-1.4.5-.2 1.1-.2 1.6.1l2.8 2-.9.7-2.4-1.7c-.2-.2-.5-.2-.7 0-.2.1-.3.4-.3.6v8.6c0 .2.1.5.3.6.2.2.5.2.7 0l2.4-1.7.9.7-2.8 2c-.5.3-1.1.4-1.6.1-.5-.3-.9-.8-.9-1.4V10.4zM13.2 16l7.2 5v-10l-7.2 5z" fill="url(#ribbon)"/>
+  <path d="M21 11l7 5-7 5V11z" fill="url(#ribbon)"/>
+</svg>

@@ -1,0 +1,215 @@
+openapi: 3.0.3
+info:
+  title: Certifica API
+  version: 1.0.0
+  description: >
+    Contrato inicial por modulo com CRUD, consultas e relatorios.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+paths:
+  /clients:
+    get:
+      summary: Listar clientes
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: page_size
+          schema: { type: integer, default: 20 }
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Criar cliente
+      responses:
+        "201":
+          description: Criado
+
+  /projects:
+    get:
+      summary: Listar projetos
+      responses:
+        "200": { description: OK }
+    post:
+      summary: Criar projeto
+      responses:
+        "201": { description: Criado }
+
+  /projects/{id}/phase-transition:
+    post:
+      summary: Avancar fase do projeto
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Atualizado }
+
+  /meetings:
+    get:
+      summary: Listar reunioes
+      responses:
+        "200": { description: OK }
+    post:
+      summary: Criar reuniao
+      responses:
+        "201": { description: Criado }
+
+  /meetings/{id}/actions/sync:
+    post:
+      summary: Sincronizar action items para Central de Acoes
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Sincronizado }
+
+  /audits:
+    get:
+      summary: Listar auditorias
+      responses:
+        "200": { description: OK }
+    post:
+      summary: Criar auditoria
+      responses:
+        "201": { description: Criado }
+
+  /rais:
+    get:
+      summary: Listar RAI
+      responses:
+        "200": { description: OK }
+    post:
+      summary: Criar RAI
+      responses:
+        "201": { description: Criado }
+
+  /rais/{id}/workflow-transition:
+    post:
+      summary: Transicao de workflow do RAI
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Atualizado }
+
+  /documents:
+    get:
+      summary: Listar documentos
+      responses:
+        "200": { description: OK }
+    post:
+      summary: Criar documento
+      responses:
+        "201": { description: Criado }
+
+  /documents/{id}/approve:
+    post:
+      summary: Aprovar documento
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Aprovado }
+
+  /esg/indicators:
+    get:
+      summary: Listar indicadores ESG
+      responses:
+        "200": { description: OK }
+    post:
+      summary: Criar indicador ESG
+      responses:
+        "201": { description: Criado }
+
+  /tasks:
+    get:
+      summary: Listar tarefas da Central de Acoes
+      responses:
+        "200": { description: OK }
+    post:
+      summary: Criar tarefa
+      responses:
+        "201": { description: Criado }
+
+  /tasks/{id}:
+    patch:
+      summary: Atualizar tarefa
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Atualizado }
+
+  /tasks/escalate:
+    post:
+      summary: Escalonar tarefas vencidas
+      responses:
+        "200": { description: Escalonamento executado }
+
+  /reports/generate:
+    post:
+      summary: Gerar relatorio por template/filtro
+      responses:
+        "200": { description: Gerado }
+
+  /reports/export:
+    post:
+      summary: Exportar relatorio em PDF/Excel
+      responses:
+        "200": { description: Exportado }
+
+  /reports/schedules:
+    get:
+      summary: Listar agendamentos de relatorio
+      responses:
+        "200": { description: OK }
+    post:
+      summary: Criar agendamento de relatorio
+      responses:
+        "201": { description: Criado }
+
+  /settings:
+    get:
+      summary: Obter configuracoes
+      responses:
+        "200": { description: OK }
+    patch:
+      summary: Atualizar configuracoes
+      responses:
+        "200": { description: Atualizado }
+
+  /permissions/matrix:
+    get:
+      summary: Obter matriz de permissao
+      responses:
+        "200": { description: OK }
+    patch:
+      summary: Atualizar matriz de permissao
+      responses:
+        "200": { description: Atualizado }
+
+  /audit-logs:
+    get:
+      summary: Listar logs de auditoria
+      responses:
+        "200": { description: OK }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
