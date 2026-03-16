@@ -155,6 +155,9 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [showCreatePipeline, setShowCreatePipeline] = useState(false);
+  const [newPipeName, setNewPipeName] = useState("");
+  const [newPipeDesc, setNewPipeDesc] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth < 1024 : false
@@ -462,16 +465,7 @@ export default function AppLayout() {
               })}
               {item.label === "Projetos" && (
                 <button
-                  onClick={async () => {
-                    const name = prompt("Nome do pipeline:");
-                    if (name && name.trim()) {
-                      const created = await createPipeline({ name: name.trim(), description: "", icon: "kanban", is_default: false });
-                      if (created) {
-                        navigate(`/projetos/p/${created.id}`);
-                        toast.success("Pipeline criado!");
-                      }
-                    }
-                  }}
+                  onClick={() => { setNewPipeName(""); setNewPipeDesc(""); setShowCreatePipeline(true); }}
                   className="flex items-center gap-1 pl-3 py-[6px] text-certifica-accent/70 hover:text-certifica-accent transition-colors cursor-pointer whitespace-nowrap"
                 >
                   <Plus className="w-3 h-3" strokeWidth={1.5} />
@@ -985,6 +979,70 @@ export default function AppLayout() {
           </ErrorBoundary>
         </main>
       </div>
+
+      {/* ── Create Pipeline Modal ── */}
+      {showCreatePipeline && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ animation: "certifica-modal-fade 150ms ease-out" }}>
+          <div className="absolute inset-0 bg-certifica-dark/40" onClick={() => setShowCreatePipeline(false)} />
+          <div className="relative bg-white rounded-[6px] border border-certifica-200 shadow-xl w-[440px] flex flex-col" style={{ animation: "certifica-modal-scale 200ms cubic-bezier(.22,1,.36,1)" }}>
+            <div className="px-5 py-3.5 border-b border-certifica-200 flex items-center justify-between">
+              <span className="text-[14px] text-certifica-900" style={{ fontWeight: 600 }}>Criar pipeline</span>
+              <button onClick={() => setShowCreatePipeline(false)} className="p-1 text-certifica-500/40 hover:text-certifica-dark transition-colors cursor-pointer">
+                <X className="w-4 h-4" strokeWidth={1.5} />
+              </button>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              <div>
+                <label className="text-[13px] text-certifica-dark block mb-1" style={{ fontWeight: 500 }}>Nome do pipeline</label>
+                <input
+                  value={newPipeName}
+                  onChange={(e) => setNewPipeName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newPipeName.trim()) {
+                      createPipeline({ name: newPipeName.trim(), description: newPipeDesc.trim(), icon: "kanban", is_default: false }).then((p) => {
+                        if (p) { navigate(`/projetos/p/${p.id}`); setShowCreatePipeline(false); toast.success("Pipeline criado!"); }
+                      });
+                    }
+                  }}
+                  className="w-full h-9 px-3 border border-certifica-200 rounded-[4px] text-[12px] text-certifica-dark placeholder:text-certifica-500/40 focus:outline-none focus:ring-1 focus:ring-certifica-accent/30 bg-white"
+                  placeholder="Ex: Vendas, Onboarding, Recrutamento..."
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="text-[13px] text-certifica-dark block mb-1" style={{ fontWeight: 500 }}>Descrição <span className="text-certifica-500/50 font-normal">(opcional)</span></label>
+                <textarea
+                  value={newPipeDesc}
+                  onChange={(e) => setNewPipeDesc(e.target.value)}
+                  className="w-full px-3 py-2 border border-certifica-200 rounded-[4px] text-[12px] text-certifica-dark placeholder:text-certifica-500/40 focus:outline-none focus:ring-1 focus:ring-certifica-accent/30 bg-white resize-none"
+                  rows={2}
+                  placeholder="Descreva o propósito deste pipeline..."
+                />
+              </div>
+            </div>
+            <div className="px-5 py-3.5 border-t border-certifica-200 flex items-center justify-end gap-2 bg-certifica-50/30">
+              <button onClick={() => setShowCreatePipeline(false)} className="px-3 py-1.5 text-[12px] text-certifica-500 hover:text-certifica-dark transition-colors cursor-pointer" style={{ fontWeight: 500 }}>
+                Cancelar
+              </button>
+              <button
+                disabled={!newPipeName.trim()}
+                onClick={async () => {
+                  const p = await createPipeline({ name: newPipeName.trim(), description: newPipeDesc.trim(), icon: "kanban", is_default: false });
+                  if (p) { navigate(`/projetos/p/${p.id}`); setShowCreatePipeline(false); toast.success("Pipeline criado!"); }
+                }}
+                className="px-4 py-1.5 text-[12px] bg-certifica-accent text-white rounded-[4px] cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ fontWeight: 600 }}
+              >
+                Criar pipeline
+              </button>
+            </div>
+          </div>
+          <style>{`
+            @keyframes certifica-modal-fade { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes certifica-modal-scale { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+          `}</style>
+        </div>
+      )}
     </div>
   );
 }
