@@ -55,14 +55,7 @@ const navItems: NavItem[] = [
   { path: "/calendario", label: "Calendário", icon: CalendarDays },
   { path: "/chat", label: "Chat", icon: MessageSquare },
   { path: "/clientes", label: "Empresas", icon: Users },
-  {
-    label: "Projetos",
-    icon: FolderKanban,
-    children: [
-      { path: "/projetos", label: "Visão Geral" },
-      { path: "/projetos/pipeline", label: "Kanban" },
-    ],
-  },
+  { path: "/projetos", label: "Projetos", icon: FolderKanban },
   { path: "/documentos", label: "Documentos", icon: FolderOpen },
   {
     label: "Auditorias",
@@ -956,7 +949,6 @@ function getBreadcrumb(pathname: string): string {
     "/chat": "Chat",
     "/clientes": "Empresas",
     "/projetos": "Projetos",
-    "/projetos/pipeline": "Kanban",
     "/documentos": "Documentos",
     "/normas": "Normas",
     "/auditorias": "Auditorias",

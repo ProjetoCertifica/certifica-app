@@ -113,10 +113,27 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
       };
 
+      /* ── Pipelines ────────────────────────────────────── */
+      pipelines: {
+        Row: {
+          id: string;
+          name: string;
+          description: string;
+          icon: string;
+          user_id: string | null;
+          is_default: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["pipelines"]["Row"], "id" | "created_at" | "updated_at">;
+        Update: Partial<Database["public"]["Tables"]["pipelines"]["Insert"]>;
+      };
+
       /* ── Pipeline Columns ─────────────────────────────── */
       pipeline_columns: {
         Row: {
           id: string;
+          pipeline_id: string | null;
           title: string;
           position: number;
           wip_limit: number;
@@ -586,6 +603,10 @@ export type RoleUpdate = Database["public"]["Tables"]["roles"]["Update"];
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"];
 export type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
+
+export type Pipeline = Database["public"]["Tables"]["pipelines"]["Row"];
+export type PipelineInsert = Database["public"]["Tables"]["pipelines"]["Insert"];
+export type PipelineUpdate = Database["public"]["Tables"]["pipelines"]["Update"];
 
 export type PipelineColumn = Database["public"]["Tables"]["pipeline_columns"]["Row"];
 export type PipelineColumnInsert = Database["public"]["Tables"]["pipeline_columns"]["Insert"];

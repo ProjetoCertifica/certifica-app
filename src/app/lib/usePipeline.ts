@@ -14,7 +14,7 @@ export interface ColumnWithCards extends PipelineColumn {
   cards: PipelineCard[];
 }
 
-export function usePipeline() {
+export function usePipeline(pipelineId?: string | null) {
   const [columns, setColumns] = useState<ColumnWithCards[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,23 +23,35 @@ export function usePipeline() {
     setLoading(true);
     setError(null);
     try {
-      const { data: cols, error: colErr } = await supabase
+      let colQuery = supabase
         .from("pipeline_columns")
         .select("*")
         .order("position");
 
+      if (pipelineId) {
+        colQuery = colQuery.eq("pipeline_id", pipelineId);
+      }
+
+      const { data: cols, error: colErr } = await colQuery;
       if (colErr) throw colErr;
 
-      const { data: cards, error: cardErr } = await supabase
-        .from("pipeline_cards")
-        .select("*")
-        .order("position");
+      const colIds = (cols ?? []).map((c) => c.id);
 
-      if (cardErr) throw cardErr;
+      let cards: PipelineCard[] = [];
+      if (colIds.length > 0) {
+        const { data: cardData, error: cardErr } = await supabase
+          .from("pipeline_cards")
+          .select("*")
+          .in("column_id", colIds)
+          .order("position");
+
+        if (cardErr) throw cardErr;
+        cards = cardData ?? [];
+      }
 
       const mapped: ColumnWithCards[] = (cols ?? []).map((col) => ({
         ...col,
-        cards: (cards ?? []).filter((c) => c.column_id === col.id),
+        cards: cards.filter((c) => c.column_id === col.id),
       }));
 
       setColumns(mapped);
@@ -48,7 +60,7 @@ export function usePipeline() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pipelineId]);
 
   useEffect(() => {
     load();
@@ -56,9 +68,13 @@ export function usePipeline() {
 
   const createColumn = useCallback(
     async (data: PipelineColumnInsert): Promise<PipelineColumn | null> => {
+      const insertData = pipelineId
+        ? { ...data, pipeline_id: pipelineId }
+        : data;
+
       const { data: inserted, error: err } = await supabase
         .from("pipeline_columns")
-        .insert(data)
+        .insert(insertData)
         .select()
         .single();
 
@@ -71,7 +87,7 @@ export function usePipeline() {
       setColumns((prev) => [...prev, withCards].sort((a, b) => a.position - b.position));
       return inserted;
     },
-    []
+    [pipelineId]
   );
 
   const updateColumn = useCallback(

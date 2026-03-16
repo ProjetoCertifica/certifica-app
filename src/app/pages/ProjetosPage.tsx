@@ -1,17 +1,31 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useBodyScrollLock } from "../lib/useBodyScrollLock";
 import { DSButton } from "../components/ds/DSButton";
 import { DSBadge } from "../components/ds/DSBadge";
 import { DSInput } from "../components/ds/DSInput";
 import { DSSelect } from "../components/ds/DSSelect";
 import { DSTextarea } from "../components/ds/DSTextarea";
-import { useProjetos, type ProjetoWithEntregaveis } from "../lib/useProjetos";
+import { useProjetos } from "../lib/useProjetos";
 import { useClientes } from "../lib/useClientes";
+import { usePipelines } from "../lib/usePipelines";
 import type { ProjetoInsert } from "../lib/database.types";
+import {
+  mapProjetoToUI,
+  faseColors,
+  faseLabels,
+  statusConfig,
+  prioridadeConfig,
+  getRiskPrazo,
+  getRiskEscopo,
+  getProgressPercent,
+  consultores,
+  type ProjetoUI,
+  type EntregavelUI,
+  type ClienteRef,
+} from "../lib/projetosShared";
 import {
   Search,
   Plus,
-  Eye,
   X,
   ChevronRight,
   FolderOpen,
@@ -25,224 +39,142 @@ import {
   CheckCircle2,
   Circle,
   Trash2,
-  GripVertical,
   Clock,
   AlertTriangle,
-  BarChart3,
-  Settings2,
   Loader2,
   RefreshCw,
+  List,
+  Columns3,
+  GanttChart,
+  Filter,
+  MoreVertical,
+  Copy,
+  Edit3,
+  Trash,
+  ChevronDown,
+  Eye,
 } from "lucide-react";
-
-
-/* ══════════════════════════════════════════════════════════
-   Types — UI (mapeado de ProjetoWithEntregaveis do Supabase)
-   ══════════════════════════════════════════════════════════ */
-
-interface EntregavelUI {
-  id: string;
-  texto: string;
-  url: string;
-  concluido: boolean;
-}
-
-interface ProjetoUI {
-  id: string;
-  codigo: string;
-  titulo: string;
-  clienteId: string;
-  clienteNome: string;
-  clienteCnpj: string;
-  norma: string;
-  fase: number;
-  faseLabel: string;
-  status: "proposta" | "em-andamento" | "concluido" | "pausado" | "cancelado";
-  prioridade: "alta" | "media" | "baixa";
-  consultor: string;
-  equipe: string[];
-  inicio: string;
-  previsao: string;
-  escopo: string;
-  valor: string;
-  condicoesPagamento: string;
-  entregaveis: EntregavelUI[];
-  totalDocumentos: number;
-  totalAuditorias: number;
-  observacoes: string;
-}
-
-interface ClienteRef {
-  id: string;
-  cnpj: string;
-  nomeFantasia: string;
-  razaoSocial: string;
-}
-
-const consultores = ["Carlos Silva", "Ana Costa", "Pedro Souza", "Maria Santos", "Roberto Lima"];
+import { toast } from "sonner";
+import { ProjectListView } from "../components/projetos/ProjectListView";
+import { ProjectKanbanView } from "../components/projetos/ProjectKanbanView";
+import { ProjectGanttView } from "../components/projetos/ProjectGanttView";
+import { ProjectFunnelView } from "../components/projetos/ProjectFunnelView";
+import type { Pipeline } from "../lib/usePipelines";
 
 /* ══════════════════════════════════════════════════════════
-   Map DB → UI
+   View types
    ══════════════════════════════════════════════════════════ */
 
-function mapProjetoToUI(p: ProjetoWithEntregaveis): ProjetoUI {
-  const formatDate = (iso: string | null) => {
-    if (!iso) return "—";
-    const d = new Date(iso);
-    return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("pt-BR");
-  };
-  return {
-    id: p.id,
-    codigo: p.codigo,
-    titulo: p.titulo,
-    clienteId: p.cliente_id,
-    clienteNome: p.cliente_nome ?? "",
-    clienteCnpj: p.cliente_cnpj ?? "",
-    norma: p.norma,
-    fase: p.fase,
-    faseLabel: p.fase_label,
-    status: p.status,
-    prioridade: p.prioridade,
-    consultor: p.consultor,
-    equipe: p.equipe ?? [],
-    inicio: formatDate(p.inicio),
-    previsao: formatDate(p.previsao),
-    escopo: p.escopo,
-    valor: p.valor,
-    condicoesPagamento: p.condicoes_pagamento,
-    entregaveis: p.entregaveis.map((e) => {
-      const [texto, url = ""] = e.texto.split("|||");
-      return { id: e.id, texto, url, concluido: e.concluido };
-    }),
-    totalDocumentos: p.total_documentos,
-    totalAuditorias: p.total_auditorias,
-    observacoes: p.observacoes,
-  };
-}
+type ViewMode = "lista" | "kanban" | "gantt" | "funil";
 
-/* ══════════════════════════════════════════════════════════
-   Helpers
-   ══════════════════════════════════════════════════════════ */
-
-const faseColors: Record<number, string> = {
-  0: "#6B7280",
-  1: "#274C77",
-  2: "#2F5E8E",
-  3: "#1F5E3B",
-  4: "#0E2A47",
-};
-
-const faseLabels: Record<number, string> = {
-  0: "Proposta",
-  1: "Planejamento",
-  2: "Solucao",
-  3: "Verificacao",
-  4: "Acompanhamento",
-};
-
-type StatusVariant = "conformidade" | "nao-conformidade" | "observacao" | "oportunidade" | "outline";
-
-const statusConfig: Record<string, { label: string; variant: StatusVariant }> = {
-  proposta: { label: "Proposta", variant: "oportunidade" },
-  "em-andamento": { label: "Em andamento", variant: "observacao" },
-  concluido: { label: "Concluido", variant: "conformidade" },
-  pausado: { label: "Pausado", variant: "outline" },
-  cancelado: { label: "Cancelado", variant: "nao-conformidade" },
-};
-
-const prioridadeConfig: Record<string, { label: string; color: string }> = {
-  alta: { label: "Alta", color: "#7A1E1E" },
-  media: { label: "Media", color: "#8C6A1F" },
-  baixa: { label: "Baixa", color: "#6B7280" },
-};
-
-function parseBrDate(date: string): Date | null {
-  if (!date || date === "—") return null;
-  const parts = date.split("/");
-  if (parts.length !== 3) return null;
-  const [dd, mm, yyyy] = parts;
-  const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-function getRiskPrazo(p: ProjetoUI): number {
-  const end = parseBrDate(p.previsao);
-  if (!end) return 0;
-  const now = new Date();
-  const days = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  if (days < 0) return 95;
-  if (days <= 7) return 85;
-  if (days <= 15) return 70;
-  if (days <= 30) return 55;
-  return 25;
-}
-
-function getRiskEscopo(p: ProjetoUI): number {
-  const total = p.entregaveis.length;
-  const done = p.entregaveis.filter((e) => e.concluido).length;
-  if (total === 0) return 65;
-  const pendingRatio = (total - done) / total;
-  const docsPenalty = p.totalDocumentos < 5 ? 15 : 0;
-  return Math.max(10, Math.min(95, Math.round(pendingRatio * 80 + docsPenalty)));
-}
-
-function getFasePreconditions(_p: ProjetoUI): string[] {
-  return [];
-}
+const viewConfig: { key: ViewMode; label: string; icon: React.ElementType }[] = [
+  { key: "lista", label: "Lista", icon: List },
+  { key: "kanban", label: "Kanban", icon: Columns3 },
+  { key: "gantt", label: "Gantt", icon: GanttChart },
+  { key: "funil", label: "Funil", icon: Filter },
+];
 
 /* ══════════════════════════════════════════════════════════
    Page
    ══════════════════════════════════════════════════════════ */
 
 export default function ProjetosPage() {
-  const { projetos: rawProjetos, loading: dbLoading, error: dbError, create, update, refetch, toggleEntregavel, addEntregavel, updateEntregavel, removeEntregavel } = useProjetos();
+  const {
+    projetos: rawProjetos,
+    loading: dbLoading,
+    error: dbError,
+    create,
+    update,
+    refetch,
+    toggleEntregavel,
+    addEntregavel,
+    updateEntregavel,
+    removeEntregavel,
+  } = useProjetos();
   const { clientes: rawClientes } = useClientes();
+  const {
+    pipelines,
+    loading: pipelinesLoading,
+    create: createPipeline,
+    update: updatePipeline,
+    remove: removePipeline,
+    duplicate: duplicatePipeline,
+  } = usePipelines();
+
   const projetosList = useMemo(() => rawProjetos.map(mapProjetoToUI), [rawProjetos]);
   const clientesDisponiveis: ClienteRef[] = useMemo(
-    () => rawClientes.map((c) => ({ id: c.id, cnpj: c.cnpj, nomeFantasia: c.nome_fantasia, razaoSocial: c.razao_social })),
-    [rawClientes],
+    () =>
+      rawClientes.map((c) => ({
+        id: c.id,
+        cnpj: c.cnpj,
+        nomeFantasia: c.nome_fantasia,
+        razaoSocial: c.razao_social,
+      })),
+    [rawClientes]
   );
 
+  /* ── State ── */
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem("certifica_projetos_view");
+    return (saved as ViewMode) || "lista";
+  });
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("todos");
   const [filterFase, setFilterFase] = useState("todos");
   const [filterConsultor, setFilterConsultor] = useState("todos");
   const [showNewModal, setShowNewModal] = useState(false);
+  const [showNewPipelineModal, setShowNewPipelineModal] = useState(false);
   const [detailTab, setDetailTab] = useState<"info" | "entregaveis" | "proposta">("info");
   const [transitionError, setTransitionError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [pipelineSidebarOpen, setPipelineSidebarOpen] = useState(true);
+  const [pipelineMenuId, setPipelineMenuId] = useState<string | null>(null);
 
-  const filtered = projetosList.filter((p) => {
-    if (filterStatus !== "todos" && p.status !== filterStatus) return false;
-    if (filterFase !== "todos" && String(p.fase) !== filterFase) return false;
-    if (filterConsultor !== "todos" && p.consultor !== filterConsultor) return false;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      return (
-        p.titulo.toLowerCase().includes(q) ||
-        p.clienteNome.toLowerCase().includes(q) ||
-        p.norma.toLowerCase().includes(q) ||
-        p.codigo.toLowerCase().includes(q)
-      );
+  /* ── Persist view mode ── */
+  useEffect(() => {
+    localStorage.setItem("certifica_projetos_view", viewMode);
+  }, [viewMode]);
+
+  /* ── Auto-select default pipeline ── */
+  useEffect(() => {
+    if (!selectedPipelineId && pipelines.length > 0) {
+      const def = pipelines.find((p) => p.is_default) || pipelines[0];
+      setSelectedPipelineId(def.id);
     }
-    return true;
-  });
+  }, [pipelines, selectedPipelineId]);
+
+  /* ── Filtering ── */
+  const filtered = useMemo(() => {
+    return projetosList.filter((p) => {
+      if (filterStatus !== "todos" && p.status !== filterStatus) return false;
+      if (filterFase !== "todos" && String(p.fase) !== filterFase) return false;
+      if (filterConsultor !== "todos" && p.consultor !== filterConsultor) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        return (
+          p.titulo.toLowerCase().includes(q) ||
+          p.clienteNome.toLowerCase().includes(q) ||
+          p.norma.toLowerCase().includes(q) ||
+          p.codigo.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [projetosList, filterStatus, filterFase, filterConsultor, searchQuery]);
 
   const selected = projetosList.find((p) => p.id === selectedId);
 
-  // summary counts
+  /* ── Summary ── */
   const totalAtivos = projetosList.filter((p) => p.status === "em-andamento").length;
   const totalPropostas = projetosList.filter((p) => p.status === "proposta").length;
 
+  /* ── Handlers ── */
   const handleAdvancePhase = async (projectId: string) => {
     setTransitionError("");
     const target = projetosList.find((p) => p.id === projectId);
     if (!target || target.fase >= 4) return;
-    const missing = getFasePreconditions(target);
-    if (missing.length > 0) {
-      setTransitionError(`Bloqueio de transição: ${missing[0]}.`);
-      return;
-    }
     const newFase = target.fase + 1;
     await update(projectId, {
       fase: newFase,
@@ -251,12 +183,27 @@ export default function ProjetosPage() {
     });
   };
 
-  const handleCreateProject = async (payload: { clienteId: string; titulo: string; norma: string; prioridade: string; descricao: string; valor: string; condicoes: string; entregaveis: string[]; observacoes: string; inicio: string; previsao: string; consultor: string; equipe: string[] }) => {
+  const handleCreateProject = async (payload: {
+    clienteId: string;
+    titulo: string;
+    norma: string;
+    prioridade: string;
+    descricao: string;
+    valor: string;
+    condicoes: string;
+    entregaveis: string[];
+    observacoes: string;
+    inicio: string;
+    previsao: string;
+    consultor: string;
+    equipe: string[];
+  }) => {
     setSaving(true);
-    const nextCode = projetosList.reduce((max, p) => {
-      const m = p.codigo.match(/^PRJ-(\d+)$/);
-      return m ? Math.max(max, Number(m[1])) : max;
-    }, 0) + 1;
+    const nextCode =
+      projetosList.reduce((max, p) => {
+        const m = p.codigo.match(/^PRJ-(\d+)$/);
+        return m ? Math.max(max, Number(m[1])) : max;
+      }, 0) + 1;
     const code = `PRJ-${String(nextCode).padStart(3, "0")}`;
     const insert: ProjetoInsert = {
       codigo: code,
@@ -285,9 +232,46 @@ export default function ProjetosPage() {
       setSelectedId(result.id);
       setShowNewModal(false);
       setDetailTab("info");
+      toast.success("Projeto criado com sucesso!");
     }
   };
 
+  const handleCreatePipeline = async (name: string, description: string) => {
+    const p = await createPipeline({ name, description, icon: "kanban", is_default: false });
+    if (p) {
+      setSelectedPipelineId(p.id);
+      setShowNewPipelineModal(false);
+      toast.success("Pipeline criado!");
+    }
+  };
+
+  const handleDuplicatePipeline = async (id: string) => {
+    const source = pipelines.find((p) => p.id === id);
+    if (!source) return;
+    const result = await duplicatePipeline(id, `${source.name} (cópia)`);
+    if (result) {
+      setSelectedPipelineId(result.id);
+      setPipelineMenuId(null);
+      toast.success("Pipeline duplicado!");
+    }
+  };
+
+  const handleDeletePipeline = async (id: string) => {
+    const p = pipelines.find((pl) => pl.id === id);
+    if (p?.is_default) {
+      toast.error("Não é possível excluir o pipeline padrão.");
+      return;
+    }
+    await removePipeline(id);
+    setPipelineMenuId(null);
+    if (selectedPipelineId === id) {
+      const def = pipelines.find((pl) => pl.is_default);
+      setSelectedPipelineId(def?.id ?? null);
+    }
+    toast.success("Pipeline excluído.");
+  };
+
+  /* ── Loading ── */
   if (dbLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -304,9 +288,16 @@ export default function ProjetosPage() {
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3 text-center max-w-xs">
           <AlertTriangle className="w-6 h-6 text-nao-conformidade" strokeWidth={1.5} />
-          <span className="text-[12px] text-nao-conformidade" style={{ fontWeight: 500 }}>Erro ao carregar projetos</span>
+          <span className="text-[12px] text-nao-conformidade" style={{ fontWeight: 500 }}>
+            Erro ao carregar projetos
+          </span>
           <span className="text-[11px] text-certifica-500">{dbError}</span>
-          <DSButton variant="outline" size="sm" icon={<RefreshCw className="w-3.5 h-3.5" strokeWidth={1.5} />} onClick={refetch}>
+          <DSButton
+            variant="outline"
+            size="sm"
+            icon={<RefreshCw className="w-3.5 h-3.5" strokeWidth={1.5} />}
+            onClick={refetch}
+          >
             Tentar novamente
           </DSButton>
         </div>
@@ -314,38 +305,207 @@ export default function ProjetosPage() {
     );
   }
 
+  const selectedPipeline = pipelines.find((p) => p.id === selectedPipelineId);
+
   return (
-    <div className="flex flex-col lg:flex-row lg:h-full overflow-auto lg:overflow-hidden">
-      {/* ── Main list ── */}
-      <div className="flex-1 flex flex-col overflow-hidden min-h-[380px] lg:min-h-0">
-        {/* Header */}
-        <div className="px-5 pt-5 pb-0">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-certifica-900">Projetos</h2>
-              <p className="text-[12px] text-certifica-500 mt-0.5" style={{ fontWeight: 400 }}>
-                {projetosList.length} projetos &middot; {totalAtivos} em andamento
-                {totalPropostas > 0 && (
-                  <span className="text-oportunidade ml-1" style={{ fontWeight: 500 }}>
-                    &middot; {totalPropostas} proposta{totalPropostas > 1 ? "s" : ""}
-                  </span>
-                )}
-              </p>
-            </div>
-            <DSButton
-              variant="primary"
-              size="sm"
-              icon={<Plus className="w-3.5 h-3.5" strokeWidth={1.5} />}
-              onClick={() => setShowNewModal(true)}
+    <div className="flex h-full overflow-hidden">
+      {/* ══════════════════════════════════════════════════════════
+         Pipeline sidebar
+         ══════════════════════════════════════════════════════════ */}
+      {(viewMode === "kanban" || viewMode === "funil") && (
+        <div
+          className="bg-white border-r border-certifica-200 flex flex-col flex-shrink-0 overflow-hidden"
+          style={{
+            width: pipelineSidebarOpen ? 220 : 0,
+            opacity: pipelineSidebarOpen ? 1 : 0,
+            transition: "width 250ms cubic-bezier(0.4,0,0.2,1), opacity 250ms ease",
+          }}
+        >
+          <div className="px-3 py-3 border-b border-certifica-200 flex items-center justify-between flex-shrink-0">
+            <span className="text-[11px] text-certifica-500 uppercase tracking-[0.06em]" style={{ fontWeight: 600 }}>
+              Pipelines
+            </span>
+            <button
+              onClick={() => setShowNewPipelineModal(true)}
+              className="p-1 text-certifica-accent hover:bg-certifica-accent/10 rounded transition-colors cursor-pointer"
+              title="Novo pipeline"
             >
-              Novo Projeto
-            </DSButton>
+              <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto py-1">
+            {pipelinesLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-4 h-4 text-certifica-accent animate-spin" strokeWidth={1.5} />
+              </div>
+            ) : pipelines.length === 0 ? (
+              <div className="px-3 py-6 text-center">
+                <p className="text-[11px] text-certifica-500">Nenhum pipeline criado.</p>
+                <button
+                  onClick={() => setShowNewPipelineModal(true)}
+                  className="mt-2 text-[11px] text-certifica-accent hover:underline cursor-pointer"
+                >
+                  Criar primeiro pipeline
+                </button>
+              </div>
+            ) : (
+              pipelines.map((pl) => {
+                const isActive = pl.id === selectedPipelineId;
+                return (
+                  <div key={pl.id} className="relative group/pl px-1.5 py-0.5">
+                    <button
+                      onClick={() => setSelectedPipelineId(pl.id)}
+                      className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-[4px] text-left transition-all duration-150 cursor-pointer ${
+                        isActive
+                          ? "bg-certifica-accent/10 text-certifica-accent-dark"
+                          : "text-certifica-500 hover:bg-certifica-50 hover:text-certifica-dark"
+                      }`}
+                    >
+                      <Columns3 className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={1.5} />
+                      <div className="flex-1 min-w-0">
+                        <span
+                          className="text-[12px] block truncate"
+                          style={{ fontWeight: isActive ? 600 : 400 }}
+                        >
+                          {pl.name}
+                        </span>
+                        {pl.description && (
+                          <span className="text-[9.5px] text-certifica-500/60 block truncate">
+                            {pl.description}
+                          </span>
+                        )}
+                      </div>
+                      {pl.is_default && (
+                        <span className="text-[8px] px-1 py-0.5 bg-certifica-accent/15 text-certifica-accent rounded flex-shrink-0" style={{ fontWeight: 600 }}>
+                          Padrão
+                        </span>
+                      )}
+                    </button>
+
+                    {/* Pipeline context menu trigger */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPipelineMenuId(pipelineMenuId === pl.id ? null : pl.id);
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-certifica-500/30 hover:text-certifica-500 opacity-0 group-hover/pl:opacity-100 transition-opacity cursor-pointer"
+                    >
+                      <MoreVertical className="w-3 h-3" strokeWidth={1.5} />
+                    </button>
+
+                    {/* Context menu */}
+                    {pipelineMenuId === pl.id && (
+                      <div className="absolute right-2 top-full z-20 w-40 bg-white border border-certifica-200 rounded-[4px] shadow-lg py-1 animate-in fade-in slide-in-from-top-1 duration-100">
+                        <button
+                          onClick={() => {
+                            const newName = prompt("Novo nome:", pl.name);
+                            if (newName && newName.trim()) {
+                              updatePipeline(pl.id, { name: newName.trim() });
+                              setPipelineMenuId(null);
+                            }
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-certifica-dark hover:bg-certifica-50 cursor-pointer"
+                        >
+                          <Edit3 className="w-3 h-3" strokeWidth={1.5} />
+                          Renomear
+                        </button>
+                        <button
+                          onClick={() => handleDuplicatePipeline(pl.id)}
+                          className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-certifica-dark hover:bg-certifica-50 cursor-pointer"
+                        >
+                          <Copy className="w-3 h-3" strokeWidth={1.5} />
+                          Duplicar
+                        </button>
+                        {!pl.is_default && (
+                          <button
+                            onClick={() => handleDeletePipeline(pl.id)}
+                            className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-red-600 hover:bg-red-50 cursor-pointer"
+                          >
+                            <Trash className="w-3 h-3" strokeWidth={1.5} />
+                            Excluir
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════
+         Main content area
+         ══════════════════════════════════════════════════════════ */}
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        {/* ── Toolbar ── */}
+        <div className="px-5 pt-4 pb-0 flex-shrink-0">
+          {/* Title row */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div>
+                <h2 className="text-certifica-900 text-[16px]" style={{ fontWeight: 700 }}>
+                  Projetos
+                </h2>
+                <p className="text-[11px] text-certifica-500 mt-0.5" style={{ fontWeight: 400 }}>
+                  {projetosList.length} projetos &middot; {totalAtivos} em andamento
+                  {totalPropostas > 0 && (
+                    <span className="text-oportunidade ml-1" style={{ fontWeight: 500 }}>
+                      &middot; {totalPropostas} proposta{totalPropostas > 1 ? "s" : ""}
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* View switcher */}
+              <div className="flex items-center bg-certifica-100/60 rounded-[4px] p-0.5">
+                {viewConfig.map((v) => {
+                  const isActive = viewMode === v.key;
+                  return (
+                    <button
+                      key={v.key}
+                      onClick={() => setViewMode(v.key)}
+                      title={v.label}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[3px] transition-all duration-200 cursor-pointer ${
+                        isActive
+                          ? "bg-white text-certifica-accent-dark shadow-sm"
+                          : "text-certifica-500 hover:text-certifica-dark"
+                      }`}
+                    >
+                      <v.icon className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      <span
+                        className="text-[11px] hidden sm:inline"
+                        style={{ fontWeight: isActive ? 600 : 400 }}
+                      >
+                        {v.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <DSButton
+                variant="primary"
+                size="sm"
+                icon={<Plus className="w-3.5 h-3.5" strokeWidth={1.5} />}
+                onClick={() => setShowNewModal(true)}
+              >
+                Novo Projeto
+              </DSButton>
+            </div>
           </div>
 
           {/* Filters */}
           <div className="flex items-center gap-3 pb-3 border-b border-certifica-200">
             <div className="relative flex-1 max-w-[260px]">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-certifica-500/40" strokeWidth={1.5} />
+              <Search
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-certifica-500/40"
+                strokeWidth={1.5}
+              />
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -387,7 +547,9 @@ export default function ProjetosPage() {
             >
               <option value="todos">Todos os consultores</option>
               {consultores.map((c) => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c} value={c}>
+                  {c}
+                </option>
               ))}
             </select>
             <div className="ml-auto text-[11px] text-certifica-500" style={{ fontWeight: 400 }}>
@@ -396,236 +558,186 @@ export default function ProjetosPage() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="flex-1 overflow-y-auto px-5 py-3">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-certifica-200">
-                {["Codigo", "Projeto", "Cliente", "Norma", "Fase", "Status", "Prioridade", "Risco prazo", "Risco escopo", "Prazo", ""].map((h) => (
-                  <th
-                    key={h}
-                    className="px-3 py-2 text-left text-[10px] tracking-[0.06em] uppercase text-certifica-500"
-                    style={{ fontWeight: 600 }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((p) => {
-                const st = statusConfig[p.status];
-                const pr = prioridadeConfig[p.prioridade];
-                const entConcluidos = p.entregaveis.filter((e) => e.concluido).length;
-                const entTotal = p.entregaveis.length;
-                const riscoPrazo = getRiskPrazo(p);
-                const riscoEscopo = getRiskEscopo(p);
-                return (
-                  <tr
-                    key={p.id}
-                    onClick={() => { setSelectedId(p.id); setDetailTab("info"); }}
-                    className={`border-b border-certifica-200/60 cursor-pointer transition-colors ${
-                      selectedId === p.id ? "bg-certifica-50" : "hover:bg-certifica-50/50"
-                    }`}
-                  >
-                    <td className="px-3 py-2.5">
-                      <span className="text-[11px] text-certifica-700 font-mono" style={{ fontWeight: 600 }}>
-                        {p.codigo}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <div>
-                        <span className="text-[12.5px] text-certifica-dark block" style={{ fontWeight: 500 }}>
-                          {p.titulo}
-                        </span>
-                        <span className="text-[10px] text-certifica-500" style={{ fontWeight: 400 }}>
-                          {entConcluidos}/{entTotal} entregaveis
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <span className="text-[12px] text-certifica-dark" style={{ fontWeight: 500 }}>
-                        {p.clienteNome}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <span className="text-[11.5px] text-certifica-500 font-mono" style={{ fontWeight: 400 }}>
-                        {p.norma}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center gap-1.5">
-                        {p.fase > 0 ? (
-                          <div
-                            className="w-4 h-4 rounded-[2px] flex items-center justify-center text-white text-[8px] flex-shrink-0"
-                            style={{ backgroundColor: faseColors[p.fase], fontWeight: 700 }}
-                          >
-                            {p.fase}
-                          </div>
-                        ) : (
-                          <div className="w-4 h-4 rounded-[2px] flex items-center justify-center bg-certifica-200 text-certifica-500 text-[8px] flex-shrink-0" style={{ fontWeight: 700 }}>
-                            P
-                          </div>
-                        )}
-                        <span className="text-[11px] text-certifica-500" style={{ fontWeight: 400 }}>
-                          {p.faseLabel}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <DSBadge variant={st.variant}>{st.label}</DSBadge>
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: pr.color }} />
-                        <span className="text-[11px] text-certifica-500" style={{ fontWeight: 400 }}>
-                          {pr.label}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <span className={`text-[11px] font-mono ${riscoPrazo >= 70 ? "text-nao-conformidade" : riscoPrazo >= 50 ? "text-observacao" : "text-conformidade"}`} style={{ fontWeight: 600 }}>
-                        {riscoPrazo}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <span className={`text-[11px] font-mono ${riscoEscopo >= 70 ? "text-nao-conformidade" : riscoEscopo >= 50 ? "text-observacao" : "text-conformidade"}`} style={{ fontWeight: 600 }}>
-                        {riscoEscopo}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <span className="text-[11.5px] text-certifica-dark font-mono" style={{ fontWeight: 400 }}>
-                        {p.previsao}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <button className="p-1 text-certifica-500/30 hover:text-certifica-700 transition-colors cursor-pointer">
-                        <Eye className="w-[13px] h-[13px]" strokeWidth={1.5} />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={11} className="px-3 py-12 text-center">
-                    <p className="text-[12.5px] text-certifica-500" style={{ fontWeight: 400 }}>
-                      Nenhum projeto encontrado.
-                    </p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+        {/* ── View content ── */}
+        <div className="flex-1 flex overflow-hidden">
+          <div
+            className="flex-1 overflow-auto"
+            style={{
+              animation: "certifica-view-enter 250ms ease-out",
+            }}
+            key={viewMode}
+          >
+            {viewMode === "lista" && (
+              <ProjectListView
+                projetos={filtered}
+                selectedId={selectedId}
+                onSelect={(id) => {
+                  setSelectedId(id);
+                  setDetailTab("info");
+                }}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+              />
+            )}
+            {viewMode === "kanban" && (
+              <ProjectKanbanView
+                pipelineId={selectedPipelineId}
+                projetos={filtered}
+                onSelectProject={(id) => {
+                  setSelectedId(id);
+                  setDetailTab("info");
+                }}
+              />
+            )}
+            {viewMode === "gantt" && (
+              <ProjectGanttView
+                projetos={filtered}
+                onSelect={(id) => {
+                  setSelectedId(id);
+                  setDetailTab("info");
+                }}
+              />
+            )}
+            {viewMode === "funil" && (
+              <ProjectFunnelView
+                projetos={filtered}
+                onSelect={(id) => {
+                  setSelectedId(id);
+                  setDetailTab("info");
+                }}
+              />
+            )}
+          </div>
 
-      {/* ══════════════════════════════════════════════════════════
-         Detail panel
-         ══════════════════════════════════════════════════════════ */}
-      {selected && (
-        <div className="w-full lg:w-[320px] lg:flex-shrink-0 border-t lg:border-t-0 lg:border-l border-certifica-200 bg-white flex flex-col overflow-hidden">
-          {/* Header */}
-          <div className="px-4 py-3 border-b border-certifica-200 flex-shrink-0">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] text-certifica-700 font-mono" style={{ fontWeight: 600 }}>
-                {selected.codigo}
-              </span>
-              <button
-                onClick={() => setSelectedId(null)}
-                className="p-1 text-certifica-500/40 hover:text-certifica-dark transition-colors cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" strokeWidth={1.5} />
-              </button>
-            </div>
-            <div className="text-[14px] text-certifica-900 mb-1" style={{ fontWeight: 600, lineHeight: "1.35" }}>
-              {selected.titulo}
-            </div>
-            <div className="flex items-center gap-2 mb-2.5">
-              <DSBadge variant={statusConfig[selected.status].variant}>
-                {statusConfig[selected.status].label}
-              </DSBadge>
-              <div className="flex items-center gap-1">
-                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: prioridadeConfig[selected.prioridade].color }} />
-                <span className="text-[10px] text-certifica-500" style={{ fontWeight: 400 }}>
-                  {prioridadeConfig[selected.prioridade].label}
-                </span>
+          {/* ══════════════════════════════════════════════════════════
+             Detail panel
+             ══════════════════════════════════════════════════════════ */}
+          {selected && (
+            <div
+              className="w-[320px] flex-shrink-0 border-l border-certifica-200 bg-white flex flex-col overflow-hidden"
+              style={{
+                animation: "certifica-slide-in 200ms ease-out",
+              }}
+            >
+              {/* Header */}
+              <div className="px-4 py-3 border-b border-certifica-200 flex-shrink-0">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] text-certifica-700 font-mono" style={{ fontWeight: 600 }}>
+                    {selected.codigo}
+                  </span>
+                  <button
+                    onClick={() => setSelectedId(null)}
+                    className="p-1 text-certifica-500/40 hover:text-certifica-dark transition-colors cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  </button>
+                </div>
+                <div className="text-[14px] text-certifica-900 mb-1" style={{ fontWeight: 600, lineHeight: "1.35" }}>
+                  {selected.titulo}
+                </div>
+                <div className="flex items-center gap-2 mb-2.5">
+                  <DSBadge variant={statusConfig[selected.status].variant}>
+                    {statusConfig[selected.status].label}
+                  </DSBadge>
+                  <div className="flex items-center gap-1">
+                    <div
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ backgroundColor: prioridadeConfig[selected.prioridade].color }}
+                    />
+                    <span className="text-[10px] text-certifica-500" style={{ fontWeight: 400 }}>
+                      {prioridadeConfig[selected.prioridade].label}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Fase stepper */}
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4].map((f) => (
+                    <div key={f} className="flex items-center gap-1 flex-1">
+                      <div
+                        className={`h-1 flex-1 rounded-full ${f <= selected.fase ? "" : "bg-certifica-200"}`}
+                        style={f <= selected.fase ? { backgroundColor: faseColors[f] } : {}}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-[9px] text-certifica-500" style={{ fontWeight: 400 }}>
+                    Planejamento
+                  </span>
+                  <span className="text-[9px] text-certifica-500" style={{ fontWeight: 400 }}>
+                    Acompanhamento
+                  </span>
+                </div>
+                <div className="mt-2.5 flex items-center gap-1.5">
+                  <DSButton
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2 text-[10.5px]"
+                    disabled={selected.fase >= 4}
+                    onClick={() => handleAdvancePhase(selected.id)}
+                  >
+                    Avançar fase
+                  </DSButton>
+                  {selected.fase >= 4 && <DSBadge variant="conformidade">Projeto concluído</DSBadge>}
+                </div>
+                {transitionError && (
+                  <p className="mt-1.5 text-[10.5px] text-nao-conformidade" style={{ fontWeight: 500 }}>
+                    {transitionError}
+                  </p>
+                )}
+              </div>
+
+              {/* Tabs */}
+              <div className="flex border-b border-certifica-200 flex-shrink-0">
+                {(
+                  [
+                    { key: "info" as const, label: "Detalhes" },
+                    { key: "entregaveis" as const, label: "Entregaveis" },
+                    { key: "proposta" as const, label: "Proposta" },
+                  ] as const
+                ).map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setDetailTab(tab.key)}
+                    className={`flex-1 py-2 text-[11px] text-center transition-colors cursor-pointer ${
+                      detailTab === tab.key
+                        ? "text-certifica-900 border-b-2 border-certifica-accent"
+                        : "text-certifica-500 hover:text-certifica-dark"
+                    }`}
+                    style={{ fontWeight: detailTab === tab.key ? 600 : 400 }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Tab content */}
+              <div className="flex-1 overflow-y-auto">
+                {detailTab === "info" && (
+                  <DetailInfo
+                    projeto={selected}
+                    onUpdateDocs={(n) => update(selected.id, { total_documentos: n })}
+                    onUpdateAuditorias={(n) => update(selected.id, { total_auditorias: n })}
+                  />
+                )}
+                {detailTab === "entregaveis" && (
+                  <DetailEntregaveis
+                    projeto={selected}
+                    onToggle={(id, val) => toggleEntregavel(id, val)}
+                    onAdd={(texto, url) => addEntregavel(selected.id, url ? `${texto}|||${url}` : texto)}
+                    onUpdate={(id, texto, url) => updateEntregavel(id, { texto: url ? `${texto}|||${url}` : texto })}
+                    onRemove={(id) => removeEntregavel(id)}
+                  />
+                )}
+                {detailTab === "proposta" && (
+                  <DetailProposta projeto={selected} onSave={(patch) => update(selected.id, patch)} />
+                )}
               </div>
             </div>
-
-            {/* Fase visual stepper */}
-            <div className="flex items-center gap-1">
-              {[1, 2, 3, 4].map((f) => (
-                <div key={f} className="flex items-center gap-1 flex-1">
-                  <div
-                    className={`h-1 flex-1 rounded-full ${
-                      f <= selected.fase ? "" : "bg-certifica-200"
-                    }`}
-                    style={f <= selected.fase ? { backgroundColor: faseColors[f] } : {}}
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center justify-between mt-1">
-              <span className="text-[9px] text-certifica-500" style={{ fontWeight: 400 }}>Planejamento</span>
-              <span className="text-[9px] text-certifica-500" style={{ fontWeight: 400 }}>Acompanhamento</span>
-            </div>
-            <div className="mt-2.5 flex items-center gap-1.5">
-              <DSButton size="sm" variant="outline" className="h-7 px-2 text-[10.5px]" disabled={selected.fase >= 4} onClick={() => handleAdvancePhase(selected.id)}>
-                Avançar fase
-              </DSButton>
-              {selected.fase >= 4 && <DSBadge variant="conformidade">Projeto concluído</DSBadge>}
-            </div>
-            {transitionError && (
-              <p className="mt-1.5 text-[10.5px] text-nao-conformidade" style={{ fontWeight: 500 }}>
-                {transitionError}
-              </p>
-            )}
-          </div>
-
-          {/* Tabs */}
-          <div className="flex border-b border-certifica-200 flex-shrink-0">
-            {([
-              { key: "info" as const, label: "Detalhes" },
-              { key: "entregaveis" as const, label: "Entregaveis" },
-              { key: "proposta" as const, label: "Proposta" },
-            ]).map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setDetailTab(tab.key)}
-                className={`flex-1 py-2 text-[11px] text-center transition-colors cursor-pointer ${
-                  detailTab === tab.key
-                    ? "text-certifica-900 border-b-2 border-certifica-accent"
-                    : "text-certifica-500 hover:text-certifica-dark"
-                }`}
-                style={{ fontWeight: detailTab === tab.key ? 600 : 400 }}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Tab content */}
-          <div className="flex-1 overflow-y-auto">
-            {detailTab === "info" && <DetailInfo projeto={selected} onUpdateDocs={(n) => update(selected.id, { total_documentos: n })} onUpdateAuditorias={(n) => update(selected.id, { total_auditorias: n })} />}
-            {detailTab === "entregaveis" && (
-              <DetailEntregaveis
-                projeto={selected}
-                onToggle={(id, val) => toggleEntregavel(id, val)}
-                onAdd={(texto, url) => addEntregavel(selected.id, url ? `${texto}|||${url}` : texto)}
-                onUpdate={(id, texto, url) => updateEntregavel(id, { texto: url ? `${texto}|||${url}` : texto })}
-                onRemove={(id) => removeEntregavel(id)}
-              />
-            )}
-            {detailTab === "proposta" && (
-              <DetailProposta
-                projeto={selected}
-                onSave={(patch) => update(selected.id, patch)}
-              />
-            )}
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* ── New project modal ── */}
       {showNewModal && (
@@ -636,6 +748,30 @@ export default function ProjetosPage() {
           onCreate={handleCreateProject}
         />
       )}
+
+      {/* ── New pipeline modal ── */}
+      {showNewPipelineModal && (
+        <NewPipelineModal
+          onClose={() => setShowNewPipelineModal(false)}
+          onCreate={handleCreatePipeline}
+        />
+      )}
+
+      {/* ── Click outside to close pipeline menu ── */}
+      {pipelineMenuId && (
+        <div className="fixed inset-0 z-10" onClick={() => setPipelineMenuId(null)} />
+      )}
+
+      <style>{`
+        @keyframes certifica-view-enter {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes certifica-slide-in {
+          from { opacity: 0; transform: translateX(16px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+      `}</style>
     </div>
   );
 }
@@ -644,10 +780,17 @@ export default function ProjetosPage() {
    Detail tab — Info
    ══════════════════════════════════════════════════════════ */
 
-function DetailInfo({ projeto: p, onUpdateDocs, onUpdateAuditorias }: { projeto: ProjetoUI; onUpdateDocs: (n: number) => void; onUpdateAuditorias: (n: number) => void }) {
+function DetailInfo({
+  projeto: p,
+  onUpdateDocs,
+  onUpdateAuditorias,
+}: {
+  projeto: ProjetoUI;
+  onUpdateDocs: (n: number) => void;
+  onUpdateAuditorias: (n: number) => void;
+}) {
   return (
     <div>
-      {/* Cliente */}
       <div className="px-4 py-3 border-b border-certifica-200">
         <div className="text-[10px] tracking-[0.06em] uppercase text-certifica-500 mb-2" style={{ fontWeight: 600 }}>
           Cliente
@@ -665,7 +808,6 @@ function DetailInfo({ projeto: p, onUpdateDocs, onUpdateAuditorias }: { projeto:
         </div>
       </div>
 
-      {/* Info grid */}
       <div className="px-4 py-3 border-b border-certifica-200">
         <div className="text-[10px] tracking-[0.06em] uppercase text-certifica-500 mb-2" style={{ fontWeight: 600 }}>
           Informacoes
@@ -679,14 +821,17 @@ function DetailInfo({ projeto: p, onUpdateDocs, onUpdateAuditorias }: { projeto:
             { label: "Previsao", value: p.previsao },
           ].map((item) => (
             <div key={item.label} className="flex items-center justify-between">
-              <span className="text-[11px] text-certifica-500" style={{ fontWeight: 400 }}>{item.label}</span>
-              <span className="text-[11px] text-certifica-dark" style={{ fontWeight: 500 }}>{item.value}</span>
+              <span className="text-[11px] text-certifica-500" style={{ fontWeight: 400 }}>
+                {item.label}
+              </span>
+              <span className="text-[11px] text-certifica-dark" style={{ fontWeight: 500 }}>
+                {item.value}
+              </span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Equipe */}
       <div className="px-4 py-3 border-b border-certifica-200">
         <div className="text-[10px] tracking-[0.06em] uppercase text-certifica-500 mb-2" style={{ fontWeight: 600 }}>
           Equipe ({p.equipe.length})
@@ -705,25 +850,6 @@ function DetailInfo({ projeto: p, onUpdateDocs, onUpdateAuditorias }: { projeto:
         </div>
       </div>
 
-      {/* Regras de transição */}
-      <div className="px-4 py-3 border-b border-certifica-200">
-        <div className="text-[10px] tracking-[0.06em] uppercase text-certifica-500 mb-2" style={{ fontWeight: 600 }}>
-          Pré-condições da fase
-        </div>
-        {getFasePreconditions(p).length === 0 ? (
-          <span className="text-[11px] text-conformidade" style={{ fontWeight: 500 }}>Projeto apto para avançar.</span>
-        ) : (
-          <div className="space-y-1">
-            {getFasePreconditions(p).map((item) => (
-              <p key={item} className="text-[11px] text-nao-conformidade" style={{ fontWeight: 500 }}>
-                • {item}
-              </p>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Escopo */}
       <div className="px-4 py-3 border-b border-certifica-200">
         <div className="text-[10px] tracking-[0.06em] uppercase text-certifica-500 mb-2" style={{ fontWeight: 600 }}>
           Escopo
@@ -733,48 +859,101 @@ function DetailInfo({ projeto: p, onUpdateDocs, onUpdateAuditorias }: { projeto:
         </p>
       </div>
 
-      {/* Counters */}
       <div className="px-4 py-3 border-b border-certifica-200">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
             <FolderOpen className="w-3.5 h-3.5 text-certifica-500/40" strokeWidth={1.5} />
-            <button onClick={() => onUpdateDocs(Math.max(0, p.totalDocumentos - 1))}
-              className="w-4 h-4 flex items-center justify-center rounded text-certifica-500/50 hover:text-certifica-dark hover:bg-certifica-100 transition-colors cursor-pointer text-[12px] leading-none">−</button>
-            <span className={`text-[11px] w-4 text-center ${p.totalDocumentos < 3 ? "text-nao-conformidade" : "text-certifica-dark"}`} style={{ fontWeight: 600 }}>{p.totalDocumentos}</span>
-            <button onClick={() => onUpdateDocs(p.totalDocumentos + 1)}
-              className="w-4 h-4 flex items-center justify-center rounded text-certifica-500/50 hover:text-certifica-dark hover:bg-certifica-100 transition-colors cursor-pointer text-[12px] leading-none">+</button>
-            <span className="text-[10px] text-certifica-500" style={{ fontWeight: 400 }}>evidências</span>
+            <button
+              onClick={() => onUpdateDocs(Math.max(0, p.totalDocumentos - 1))}
+              className="w-4 h-4 flex items-center justify-center rounded text-certifica-500/50 hover:text-certifica-dark hover:bg-certifica-100 transition-colors cursor-pointer text-[12px] leading-none"
+            >
+              −
+            </button>
+            <span
+              className={`text-[11px] w-4 text-center ${
+                p.totalDocumentos < 3 ? "text-nao-conformidade" : "text-certifica-dark"
+              }`}
+              style={{ fontWeight: 600 }}
+            >
+              {p.totalDocumentos}
+            </span>
+            <button
+              onClick={() => onUpdateDocs(p.totalDocumentos + 1)}
+              className="w-4 h-4 flex items-center justify-center rounded text-certifica-500/50 hover:text-certifica-dark hover:bg-certifica-100 transition-colors cursor-pointer text-[12px] leading-none"
+            >
+              +
+            </button>
+            <span className="text-[10px] text-certifica-500" style={{ fontWeight: 400 }}>
+              evidências
+            </span>
           </div>
           <div className="flex items-center gap-1.5">
             <ClipboardCheck className="w-3.5 h-3.5 text-certifica-500/40" strokeWidth={1.5} />
-            <button onClick={() => onUpdateAuditorias(Math.max(0, p.totalAuditorias - 1))}
-              className="w-4 h-4 flex items-center justify-center rounded text-certifica-500/50 hover:text-certifica-dark hover:bg-certifica-100 transition-colors cursor-pointer text-[12px] leading-none">−</button>
-            <span className={`text-[11px] w-4 text-center ${p.fase >= 3 && p.totalAuditorias < 1 ? "text-nao-conformidade" : "text-certifica-dark"}`} style={{ fontWeight: 600 }}>{p.totalAuditorias}</span>
-            <button onClick={() => onUpdateAuditorias(p.totalAuditorias + 1)}
-              className="w-4 h-4 flex items-center justify-center rounded text-certifica-500/50 hover:text-certifica-dark hover:bg-certifica-100 transition-colors cursor-pointer text-[12px] leading-none">+</button>
-            <span className="text-[10px] text-certifica-500" style={{ fontWeight: 400 }}>auditorias</span>
+            <button
+              onClick={() => onUpdateAuditorias(Math.max(0, p.totalAuditorias - 1))}
+              className="w-4 h-4 flex items-center justify-center rounded text-certifica-500/50 hover:text-certifica-dark hover:bg-certifica-100 transition-colors cursor-pointer text-[12px] leading-none"
+            >
+              −
+            </button>
+            <span
+              className={`text-[11px] w-4 text-center ${
+                p.fase >= 3 && p.totalAuditorias < 1 ? "text-nao-conformidade" : "text-certifica-dark"
+              }`}
+              style={{ fontWeight: 600 }}
+            >
+              {p.totalAuditorias}
+            </span>
+            <button
+              onClick={() => onUpdateAuditorias(p.totalAuditorias + 1)}
+              className="w-4 h-4 flex items-center justify-center rounded text-certifica-500/50 hover:text-certifica-dark hover:bg-certifica-100 transition-colors cursor-pointer text-[12px] leading-none"
+            >
+              +
+            </button>
+            <span className="text-[10px] text-certifica-500" style={{ fontWeight: 400 }}>
+              auditorias
+            </span>
           </div>
         </div>
         <div className="mt-2.5 grid grid-cols-2 gap-2">
           <div className="bg-certifica-50 border border-certifica-200 rounded-[3px] px-2 py-1.5">
             <div className="text-[10px] text-certifica-500">Risco de prazo</div>
-            <div className={`text-[12px] font-mono ${getRiskPrazo(p) >= 70 ? "text-nao-conformidade" : getRiskPrazo(p) >= 50 ? "text-observacao" : "text-conformidade"}`} style={{ fontWeight: 600 }}>
+            <div
+              className={`text-[12px] font-mono ${
+                getRiskPrazo(p) >= 70
+                  ? "text-nao-conformidade"
+                  : getRiskPrazo(p) >= 50
+                  ? "text-observacao"
+                  : "text-conformidade"
+              }`}
+              style={{ fontWeight: 600 }}
+            >
               {getRiskPrazo(p)}
             </div>
           </div>
           <div className="bg-certifica-50 border border-certifica-200 rounded-[3px] px-2 py-1.5">
             <div className="text-[10px] text-certifica-500">Risco de escopo</div>
-            <div className={`text-[12px] font-mono ${getRiskEscopo(p) >= 70 ? "text-nao-conformidade" : getRiskEscopo(p) >= 50 ? "text-observacao" : "text-conformidade"}`} style={{ fontWeight: 600 }}>
+            <div
+              className={`text-[12px] font-mono ${
+                getRiskEscopo(p) >= 70
+                  ? "text-nao-conformidade"
+                  : getRiskEscopo(p) >= 50
+                  ? "text-observacao"
+                  : "text-conformidade"
+              }`}
+              style={{ fontWeight: 600 }}
+            >
               {getRiskEscopo(p)}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Observacoes */}
       {p.observacoes && (
         <div className="px-4 py-3">
-          <div className="text-[10px] tracking-[0.06em] uppercase text-certifica-500 mb-2" style={{ fontWeight: 600 }}>
+          <div
+            className="text-[10px] tracking-[0.06em] uppercase text-certifica-500 mb-2"
+            style={{ fontWeight: 600 }}
+          >
             Observacoes
           </div>
           <p className="text-[11.5px] text-certifica-dark" style={{ fontWeight: 400, lineHeight: "1.55" }}>
@@ -834,39 +1013,53 @@ function DetailEntregaveis({
 
   return (
     <div>
-      {/* Progress */}
       <div className="px-4 py-3 border-b border-certifica-200">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[11px] text-certifica-dark" style={{ fontWeight: 500 }}>
             {concluidos} de {total} concluídos
           </span>
-          <span className="text-[12px] text-certifica-900 font-mono" style={{ fontWeight: 600 }}>{pct}%</span>
+          <span className="text-[12px] text-certifica-900 font-mono" style={{ fontWeight: 600 }}>
+            {pct}%
+          </span>
         </div>
         <div className="h-[4px] bg-certifica-200 rounded-full overflow-hidden">
-          <div className="h-full rounded-full transition-all duration-300"
-            style={{ width: `${pct}%`, backgroundColor: pct === 100 ? "#1F5E3B" : "#2B8EAD" }} />
+          <div
+            className="h-full rounded-full transition-all duration-300"
+            style={{ width: `${pct}%`, backgroundColor: pct === 100 ? "#1F5E3B" : "#2B8EAD" }}
+          />
         </div>
       </div>
 
-      {/* List */}
       <div className="px-4 py-2">
         {p.entregaveis.map((ent, idx) => (
           <div key={ent.id} className={`py-2.5 ${idx > 0 ? "border-t border-certifica-200" : ""}`}>
             {editingId === ent.id ? (
               <div className="space-y-1.5">
-                <input value={editTexto} onChange={(e) => setEditTexto(e.target.value)}
+                <input
+                  value={editTexto}
+                  onChange={(e) => setEditTexto(e.target.value)}
                   className="w-full h-8 px-2.5 border border-certifica-accent/50 rounded-[4px] text-[12px] bg-white focus:outline-none"
-                  placeholder="Descrição" autoFocus />
-                <input value={editUrl} onChange={(e) => setEditUrl(e.target.value)}
+                  placeholder="Descrição"
+                  autoFocus
+                />
+                <input
+                  value={editUrl}
+                  onChange={(e) => setEditUrl(e.target.value)}
                   className="w-full h-8 px-2.5 border border-certifica-200 rounded-[4px] text-[11px] bg-white focus:outline-none"
-                  placeholder="URL do documento (opcional)" />
+                  placeholder="URL do documento (opcional)"
+                />
                 <div className="flex gap-2">
-                  <button onClick={saveEdit}
-                    className="px-3 py-1 text-[11px] bg-certifica-accent text-white rounded-[4px] cursor-pointer hover:opacity-90" style={{ fontWeight: 600 }}>
+                  <button
+                    onClick={saveEdit}
+                    className="px-3 py-1 text-[11px] bg-certifica-accent text-white rounded-[4px] cursor-pointer hover:opacity-90"
+                    style={{ fontWeight: 600 }}
+                  >
                     Salvar
                   </button>
-                  <button onClick={() => setEditingId(null)}
-                    className="px-3 py-1 text-[11px] border border-certifica-200 text-certifica-500 rounded-[4px] cursor-pointer hover:text-certifica-dark">
+                  <button
+                    onClick={() => setEditingId(null)}
+                    className="px-3 py-1 text-[11px] border border-certifica-200 text-certifica-500 rounded-[4px] cursor-pointer hover:text-certifica-dark"
+                  >
                     Cancelar
                   </button>
                 </div>
@@ -874,28 +1067,45 @@ function DetailEntregaveis({
             ) : (
               <div className="flex items-start gap-2.5 group">
                 <button onClick={() => onToggle(ent.id, !ent.concluido)} className="mt-0.5 flex-shrink-0 cursor-pointer">
-                  {ent.concluido
-                    ? <CheckCircle2 className="w-4 h-4 text-conformidade" strokeWidth={1.5} />
-                    : <Circle className="w-4 h-4 text-certifica-200 hover:text-certifica-400 transition-colors" strokeWidth={1.5} />}
+                  {ent.concluido ? (
+                    <CheckCircle2 className="w-4 h-4 text-conformidade" strokeWidth={1.5} />
+                  ) : (
+                    <Circle
+                      className="w-4 h-4 text-certifica-200 hover:text-certifica-400 transition-colors"
+                      strokeWidth={1.5}
+                    />
+                  )}
                 </button>
                 <div className="flex-1 min-w-0">
-                  <span className={`text-[12px] ${ent.concluido ? "text-certifica-500 line-through" : "text-certifica-dark"}`}
-                    style={{ fontWeight: 400, lineHeight: "1.45" }}>
+                  <span
+                    className={`text-[12px] ${ent.concluido ? "text-certifica-500 line-through" : "text-certifica-dark"}`}
+                    style={{ fontWeight: 400, lineHeight: "1.45" }}
+                  >
                     {ent.texto}
                   </span>
                   {ent.url && (
-                    <a href={ent.url} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1 mt-0.5 text-[10px] text-certifica-accent hover:underline">
+                    <a
+                      href={ent.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 mt-0.5 text-[10px] text-certifica-accent hover:underline"
+                    >
                       <FileText className="w-3 h-3" strokeWidth={1.5} />
                       <span className="truncate">{ent.url}</span>
                     </a>
                   )}
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                  <button onClick={() => startEdit(ent)} className="p-0.5 text-certifica-400 hover:text-certifica-dark cursor-pointer transition-colors">
+                  <button
+                    onClick={() => startEdit(ent)}
+                    className="p-0.5 text-certifica-400 hover:text-certifica-dark cursor-pointer transition-colors"
+                  >
                     <FileText className="w-3 h-3" strokeWidth={1.5} />
                   </button>
-                  <button onClick={() => onRemove(ent.id)} className="p-0.5 text-certifica-400 hover:text-nao-conformidade cursor-pointer transition-colors">
+                  <button
+                    onClick={() => onRemove(ent.id)}
+                    className="p-0.5 text-certifica-400 hover:text-nao-conformidade cursor-pointer transition-colors"
+                  >
                     <Trash2 className="w-3 h-3" strokeWidth={1.5} />
                   </button>
                 </div>
@@ -905,18 +1115,27 @@ function DetailEntregaveis({
         ))}
       </div>
 
-      {/* Add new */}
       <div className="px-4 py-3 border-t border-certifica-200 space-y-1.5">
-        <input value={newTexto} onChange={(e) => setNewTexto(e.target.value)}
+        <input
+          value={newTexto}
+          onChange={(e) => setNewTexto(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleAdd()}
           className="w-full h-8 px-2.5 border border-certifica-200 rounded-[4px] text-[12px] bg-white focus:outline-none focus:border-certifica-accent/50"
-          placeholder="Novo entregável..." />
+          placeholder="Novo entregável..."
+        />
         <div className="flex gap-2">
-          <input value={newUrl} onChange={(e) => setNewUrl(e.target.value)}
+          <input
+            value={newUrl}
+            onChange={(e) => setNewUrl(e.target.value)}
             className="flex-1 h-8 px-2.5 border border-certifica-200 rounded-[4px] text-[11px] bg-white focus:outline-none focus:border-certifica-accent/50"
-            placeholder="URL do documento (opcional)" />
-          <button onClick={handleAdd} disabled={!newTexto.trim()}
-            className="px-3 h-8 text-[11px] bg-certifica-accent text-white rounded-[4px] cursor-pointer hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0" style={{ fontWeight: 600 }}>
+            placeholder="URL do documento (opcional)"
+          />
+          <button
+            onClick={handleAdd}
+            disabled={!newTexto.trim()}
+            className="px-3 h-8 text-[11px] bg-certifica-accent text-white rounded-[4px] cursor-pointer hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+            style={{ fontWeight: 600 }}
+          >
             Adicionar
           </button>
         </div>
@@ -929,42 +1148,73 @@ function DetailEntregaveis({
    Detail tab — Proposta
    ══════════════════════════════════════════════════════════ */
 
-function DetailProposta({ projeto: p, onSave }: { projeto: ProjetoUI; onSave: (patch: Record<string, unknown>) => void }) {
+function DetailProposta({
+  projeto: p,
+  onSave,
+}: {
+  projeto: ProjetoUI;
+  onSave: (patch: Record<string, unknown>) => void;
+}) {
   const [valor, setValor] = useState(p.valor);
   const [condicoes, setCondicoes] = useState(p.condicoesPagamento);
   const [escopo, setEscopo] = useState(p.escopo);
 
-  // Sync if project changes (e.g. different project selected)
-  React.useEffect(() => {
+  useEffect(() => {
     setValor(p.valor);
     setCondicoes(p.condicoesPagamento);
     setEscopo(p.escopo);
-  }, [p.id]);
+  }, [p.id, p.valor, p.condicoesPagamento, p.escopo]);
 
   const save = () => onSave({ valor: valor.trim(), condicoes_pagamento: condicoes.trim(), escopo: escopo.trim() });
 
-  const fieldClass = "w-full px-2.5 py-1.5 border border-certifica-200 rounded-[4px] text-[12px] bg-white focus:outline-none focus:border-certifica-accent/50 transition-colors";
-  const labelClass = "text-[10px] tracking-[0.06em] uppercase text-certifica-500 mb-1 block" as const;
+  const fieldClass =
+    "w-full px-2.5 py-1.5 border border-certifica-200 rounded-[4px] text-[12px] bg-white focus:outline-none focus:border-certifica-accent/50 transition-colors";
+  const labelClass = "text-[10px] tracking-[0.06em] uppercase text-certifica-500 mb-1 block";
 
   return (
     <div>
       <div className="px-4 py-3 border-b border-certifica-200 space-y-3">
-        <div className="text-[10px] tracking-[0.06em] uppercase text-certifica-500 mb-1" style={{ fontWeight: 600 }}>Valores</div>
-        <div>
-          <label className={labelClass} style={{ fontWeight: 600 }}>Valor do projeto</label>
-          <input value={valor} onChange={(e) => setValor(e.target.value)} onBlur={save} className={fieldClass} placeholder="R$ 0,00" />
+        <div className="text-[10px] tracking-[0.06em] uppercase text-certifica-500 mb-1" style={{ fontWeight: 600 }}>
+          Valores
         </div>
         <div>
-          <label className={labelClass} style={{ fontWeight: 600 }}>Condições de pagamento</label>
-          <input value={condicoes} onChange={(e) => setCondicoes(e.target.value)} onBlur={save} className={fieldClass} placeholder="Ex: 50% entrada + 50% conclusão" />
+          <label className={labelClass} style={{ fontWeight: 600 }}>
+            Valor do projeto
+          </label>
+          <input
+            value={valor}
+            onChange={(e) => setValor(e.target.value)}
+            onBlur={save}
+            className={fieldClass}
+            placeholder="R$ 0,00"
+          />
+        </div>
+        <div>
+          <label className={labelClass} style={{ fontWeight: 600 }}>
+            Condições de pagamento
+          </label>
+          <input
+            value={condicoes}
+            onChange={(e) => setCondicoes(e.target.value)}
+            onBlur={save}
+            className={fieldClass}
+            placeholder="Ex: 50% entrada + 50% conclusão"
+          />
         </div>
       </div>
 
       <div className="px-4 py-3 border-b border-certifica-200">
-        <div className="text-[10px] tracking-[0.06em] uppercase text-certifica-500 mb-2" style={{ fontWeight: 600 }}>Escopo da Proposta</div>
-        <textarea value={escopo} onChange={(e) => setEscopo(e.target.value)} onBlur={save}
+        <div className="text-[10px] tracking-[0.06em] uppercase text-certifica-500 mb-2" style={{ fontWeight: 600 }}>
+          Escopo da Proposta
+        </div>
+        <textarea
+          value={escopo}
+          onChange={(e) => setEscopo(e.target.value)}
+          onBlur={save}
           className="w-full px-2.5 py-1.5 border border-certifica-200 rounded-[4px] text-[12px] bg-white focus:outline-none focus:border-certifica-accent/50 transition-colors resize-none"
-          rows={5} placeholder="Descreva o escopo do projeto..." />
+          rows={5}
+          placeholder="Descreva o escopo do projeto..."
+        />
       </div>
 
       <div className="px-4 py-3 border-b border-certifica-200">
@@ -977,8 +1227,10 @@ function DetailProposta({ projeto: p, onSave }: { projeto: ProjetoUI; onSave: (p
               <span className="text-[10px] text-certifica-500 font-mono mt-px flex-shrink-0" style={{ fontWeight: 500 }}>
                 {String(idx + 1).padStart(2, "0")}
               </span>
-              <span className={`text-[11.5px] ${ent.concluido ? "text-certifica-500 line-through" : "text-certifica-dark"}`}
-                style={{ fontWeight: 400, lineHeight: "1.45" }}>
+              <span
+                className={`text-[11.5px] ${ent.concluido ? "text-certifica-500 line-through" : "text-certifica-dark"}`}
+                style={{ fontWeight: 400, lineHeight: "1.45" }}
+              >
                 {ent.texto}
               </span>
             </div>
@@ -990,19 +1242,27 @@ function DetailProposta({ projeto: p, onSave }: { projeto: ProjetoUI; onSave: (p
       </div>
 
       <div className="px-4 py-3">
-        <div className="text-[10px] tracking-[0.06em] uppercase text-certifica-500 mb-2" style={{ fontWeight: 600 }}>Cronograma</div>
+        <div className="text-[10px] tracking-[0.06em] uppercase text-certifica-500 mb-2" style={{ fontWeight: 600 }}>
+          Cronograma
+        </div>
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <span className="text-[11px] text-certifica-500">Início</span>
-            <span className="text-[11px] text-certifica-dark font-mono" style={{ fontWeight: 500 }}>{p.inicio}</span>
+            <span className="text-[11px] text-certifica-dark font-mono" style={{ fontWeight: 500 }}>
+              {p.inicio}
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-[11px] text-certifica-500">Previsão conclusão</span>
-            <span className="text-[11px] text-certifica-dark font-mono" style={{ fontWeight: 500 }}>{p.previsao}</span>
+            <span className="text-[11px] text-certifica-dark font-mono" style={{ fontWeight: 500 }}>
+              {p.previsao}
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-[11px] text-certifica-500">Equipe</span>
-            <span className="text-[11px] text-certifica-dark" style={{ fontWeight: 500 }}>{p.equipe.join(", ")}</span>
+            <span className="text-[11px] text-certifica-dark" style={{ fontWeight: 500 }}>
+              {p.equipe.join(", ")}
+            </span>
           </div>
         </div>
       </div>
@@ -1014,9 +1274,28 @@ function DetailProposta({ projeto: p, onSave }: { projeto: ProjetoUI; onSave: (p
    New Project Modal
    ══════════════════════════════════════════════════════════ */
 
-function NewProjectModal({ onClose, onCreate, clientesDisponiveis, saving }: {
+function NewProjectModal({
+  onClose,
+  onCreate,
+  clientesDisponiveis,
+  saving,
+}: {
   onClose: () => void;
-  onCreate: (payload: { clienteId: string; titulo: string; norma: string; prioridade: string; descricao: string; valor: string; condicoes: string; entregaveis: string[]; observacoes: string; inicio: string; previsao: string; consultor: string; equipe: string[] }) => void;
+  onCreate: (payload: {
+    clienteId: string;
+    titulo: string;
+    norma: string;
+    prioridade: string;
+    descricao: string;
+    valor: string;
+    condicoes: string;
+    entregaveis: string[];
+    observacoes: string;
+    inicio: string;
+    previsao: string;
+    consultor: string;
+    equipe: string[];
+  }) => void;
   clientesDisponiveis: ClienteRef[];
   saving: boolean;
 }) {
@@ -1024,20 +1303,17 @@ function NewProjectModal({ onClose, onCreate, clientesDisponiveis, saving }: {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [wizardError, setWizardError] = useState("");
 
-  // Step 1 — Identificacao
   const [clienteId, setClienteId] = useState("");
   const [titulo, setTitulo] = useState("");
   const [norma, setNorma] = useState("");
   const [prioridade, setPrioridade] = useState("media");
   const [descricao, setDescricao] = useState("");
 
-  // Step 2 — Proposta
   const [valor, setValor] = useState("");
   const [condicoes, setCondicoes] = useState("");
   const [entregaveis, setEntregaveis] = useState<string[]>([""]);
   const [observacoes, setObservacoes] = useState("");
 
-  // Step 3 — Cronograma & Equipe
   const [inicio, setInicio] = useState("");
   const [previsao, setPrevisao] = useState("");
   const [consultorPrincipal, setConsultorPrincipal] = useState("");
@@ -1045,48 +1321,26 @@ function NewProjectModal({ onClose, onCreate, clientesDisponiveis, saving }: {
 
   const selectedClient = clientesDisponiveis.find((c) => c.id === clienteId);
 
-  const addEntregavel = () => setEntregaveis([...entregaveis, ""]);
-  const removeEntregavel = (idx: number) => {
+  const addEntregavelItem = () => setEntregaveis([...entregaveis, ""]);
+  const removeEntregavelItem = (idx: number) => {
     if (entregaveis.length <= 1) return;
     setEntregaveis(entregaveis.filter((_, i) => i !== idx));
   };
-  const updateEntregavel = (idx: number, val: string) => {
+  const updateEntregavelItem = (idx: number, val: string) => {
     const copy = [...entregaveis];
     copy[idx] = val;
     setEntregaveis(copy);
   };
 
   const toggleEquipe = (nome: string) => {
-    setEquipeSelecionada((prev) =>
-      prev.includes(nome) ? prev.filter((n) => n !== nome) : [...prev, nome]
-    );
+    setEquipeSelecionada((prev) => (prev.includes(nome) ? prev.filter((n) => n !== nome) : [...prev, nome]));
   };
 
   const stepLabels = ["Identificacao", "Proposta", "Cronograma"];
 
-  const toBrDate = (isoDate: string) => {
-    if (!isoDate) return "—";
-    const [yyyy, mm, dd] = isoDate.split("-");
-    if (!yyyy || !mm || !dd) return "—";
-    return `${dd}/${mm}/${yyyy}`;
-  };
-
-  const canGoNextFromStep1 =
-    clienteId.trim() !== "" &&
-    titulo.trim() !== "" &&
-    norma.trim() !== "" &&
-    descricao.trim() !== "";
-
-  const canGoNextFromStep2 =
-    valor.trim() !== "" &&
-    condicoes.trim() !== "" &&
-    entregaveis.filter((e) => e.trim()).length > 0;
-
-  const canCreate =
-    consultorPrincipal.trim() !== "" &&
-    equipeSelecionada.length > 0 &&
-    inicio.trim() !== "" &&
-    previsao.trim() !== "";
+  const canGoNextFromStep1 = clienteId.trim() !== "" && titulo.trim() !== "" && norma.trim() !== "" && descricao.trim() !== "";
+  const canGoNextFromStep2 = valor.trim() !== "" && condicoes.trim() !== "" && entregaveis.filter((e) => e.trim()).length > 0;
+  const canCreate = consultorPrincipal.trim() !== "" && equipeSelecionada.length > 0 && inicio.trim() !== "" && previsao.trim() !== "";
 
   const handleNext = () => {
     setWizardError("");
@@ -1131,7 +1385,6 @@ function NewProjectModal({ onClose, onCreate, clientesDisponiveis, saving }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-certifica-dark/40 certifica-modal-backdrop" onClick={onClose} />
-
       <div className="relative bg-white rounded-[4px] border border-certifica-200 w-[620px] max-h-[88vh] flex flex-col certifica-modal-content">
         {/* Header */}
         <div className="px-5 py-3.5 border-b border-certifica-200 flex items-center justify-between flex-shrink-0">
@@ -1155,10 +1408,7 @@ function NewProjectModal({ onClose, onCreate, clientesDisponiveis, saving }: {
             return (
               <div key={label} className="contents">
                 {idx > 0 && <div className={`flex-1 h-px ${isDone ? "bg-certifica-accent" : "bg-certifica-200"}`} />}
-                <button
-                  onClick={() => setStep(stepNum)}
-                  className="flex items-center gap-1.5 cursor-pointer"
-                >
+                <button onClick={() => setStep(stepNum)} className="flex items-center gap-1.5 cursor-pointer">
                   <div
                     className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
                       isActive
@@ -1171,10 +1421,7 @@ function NewProjectModal({ onClose, onCreate, clientesDisponiveis, saving }: {
                   >
                     {isDone ? "✓" : stepNum}
                   </div>
-                  <span
-                    className={`text-[11px] ${isActive ? "text-certifica-900" : "text-certifica-500"}`}
-                    style={{ fontWeight: isActive ? 600 : 400 }}
-                  >
+                  <span className={`text-[11px] ${isActive ? "text-certifica-900" : "text-certifica-500"}`} style={{ fontWeight: isActive ? 600 : 400 }}>
                     {label}
                   </span>
                 </button>
@@ -1185,10 +1432,8 @@ function NewProjectModal({ onClose, onCreate, clientesDisponiveis, saving }: {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-4">
-          {/* Step 1 — Identificacao */}
           {step === 1 && (
             <div className="space-y-4">
-              {/* Cliente */}
               <div>
                 <div className="text-[10px] tracking-[0.06em] uppercase text-certifica-500 mb-3" style={{ fontWeight: 600 }}>
                   Cliente
@@ -1199,10 +1444,7 @@ function NewProjectModal({ onClose, onCreate, clientesDisponiveis, saving }: {
                   onChange={(e) => setClienteId(e.target.value)}
                   options={[
                     { value: "", label: "Escolha um cliente cadastrado..." },
-                    ...clientesDisponiveis.map((c) => ({
-                      value: c.id,
-                      label: `${c.nomeFantasia} — ${c.cnpj}`,
-                    })),
+                    ...clientesDisponiveis.map((c) => ({ value: c.id, label: `${c.nomeFantasia} — ${c.cnpj}` })),
                   ]}
                 />
                 {selectedClient && (
@@ -1219,21 +1461,13 @@ function NewProjectModal({ onClose, onCreate, clientesDisponiveis, saving }: {
                   </div>
                 )}
               </div>
-
               <div className="border-t border-certifica-200" />
-
-              {/* Dados do projeto */}
               <div>
                 <div className="text-[10px] tracking-[0.06em] uppercase text-certifica-500 mb-3" style={{ fontWeight: 600 }}>
                   Dados do Projeto
                 </div>
                 <div className="space-y-3">
-                  <DSInput
-                    label="Titulo do projeto"
-                    placeholder="Ex: Certificacao ISO 9001:2015"
-                    value={titulo}
-                    onChange={(e) => setTitulo(e.target.value)}
-                  />
+                  <DSInput label="Titulo do projeto" placeholder="Ex: Certificacao ISO 9001:2015" value={titulo} onChange={(e) => setTitulo(e.target.value)} />
                   <div className="grid grid-cols-2 gap-3">
                     <DSSelect
                       label="Norma / Referencial"
@@ -1277,7 +1511,6 @@ function NewProjectModal({ onClose, onCreate, clientesDisponiveis, saving }: {
             </div>
           )}
 
-          {/* Step 2 — Proposta */}
           {step === 2 && (
             <div className="space-y-4">
               <div>
@@ -1300,20 +1533,13 @@ function NewProjectModal({ onClose, onCreate, clientesDisponiveis, saving }: {
                   />
                 </div>
               </div>
-
               <div className="border-t border-certifica-200" />
-
-              {/* Entregáveis */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-[10px] tracking-[0.06em] uppercase text-certifica-500" style={{ fontWeight: 600 }}>
                     Entregaveis
                   </div>
-                  <button
-                    onClick={addEntregavel}
-                    className="flex items-center gap-1 text-[11px] text-certifica-accent cursor-pointer hover:underline"
-                    style={{ fontWeight: 500 }}
-                  >
+                  <button onClick={addEntregavelItem} className="flex items-center gap-1 text-[11px] text-certifica-accent cursor-pointer hover:underline" style={{ fontWeight: 500 }}>
                     <Plus className="w-3 h-3" strokeWidth={1.5} />
                     Adicionar
                   </button>
@@ -1326,17 +1552,15 @@ function NewProjectModal({ onClose, onCreate, clientesDisponiveis, saving }: {
                       </span>
                       <input
                         value={ent}
-                        onChange={(e) => updateEntregavel(idx, e.target.value)}
+                        onChange={(e) => updateEntregavelItem(idx, e.target.value)}
                         placeholder="Descreva o entregavel..."
                         className="flex-1 h-8 px-3 bg-white border border-certifica-200 rounded-[3px] text-[12px] text-certifica-dark placeholder:text-certifica-500/40 focus:outline-none focus:ring-1 focus:ring-certifica-700/30"
                         style={{ fontWeight: 400 }}
                       />
                       <button
-                        onClick={() => removeEntregavel(idx)}
+                        onClick={() => removeEntregavelItem(idx)}
                         className={`p-1 transition-colors cursor-pointer ${
-                          entregaveis.length > 1
-                            ? "text-certifica-500/30 hover:text-nao-conformidade"
-                            : "text-certifica-200 cursor-not-allowed"
+                          entregaveis.length > 1 ? "text-certifica-500/30 hover:text-nao-conformidade" : "text-certifica-200 cursor-not-allowed"
                         }`}
                         disabled={entregaveis.length <= 1}
                       >
@@ -1346,19 +1570,11 @@ function NewProjectModal({ onClose, onCreate, clientesDisponiveis, saving }: {
                   ))}
                 </div>
               </div>
-
               <div className="border-t border-certifica-200" />
-
-              <DSTextarea
-                label="Observacoes"
-                placeholder="Condicoes especiais, restricoes, pontos de atencao..."
-                value={observacoes}
-                onChange={(e) => setObservacoes(e.target.value)}
-              />
+              <DSTextarea label="Observacoes" placeholder="Condicoes especiais, restricoes..." value={observacoes} onChange={(e) => setObservacoes(e.target.value)} />
             </div>
           )}
 
-          {/* Step 3 — Cronograma & Equipe */}
           {step === 3 && (
             <div className="space-y-4">
               <div>
@@ -1366,23 +1582,11 @@ function NewProjectModal({ onClose, onCreate, clientesDisponiveis, saving }: {
                   Cronograma
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <DSInput
-                    label="Inicio previsto"
-                    type="date"
-                    value={inicio}
-                    onChange={(e) => setInicio(e.target.value)}
-                  />
-                  <DSInput
-                    label="Conclusao prevista"
-                    type="date"
-                    value={previsao}
-                    onChange={(e) => setPrevisao(e.target.value)}
-                  />
+                  <DSInput label="Inicio previsto" type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} />
+                  <DSInput label="Conclusao prevista" type="date" value={previsao} onChange={(e) => setPrevisao(e.target.value)} />
                 </div>
               </div>
-
               <div className="border-t border-certifica-200" />
-
               <div>
                 <div className="text-[10px] tracking-[0.06em] uppercase text-certifica-500 mb-3" style={{ fontWeight: 600 }}>
                   Equipe
@@ -1396,12 +1600,8 @@ function NewProjectModal({ onClose, onCreate, clientesDisponiveis, saving }: {
                       setEquipeSelecionada([...equipeSelecionada, e.target.value]);
                     }
                   }}
-                  options={[
-                    { value: "", label: "Selecione..." },
-                    ...consultores.map((c) => ({ value: c, label: c })),
-                  ]}
+                  options={[{ value: "", label: "Selecione..." }, ...consultores.map((c) => ({ value: c, label: c }))]}
                 />
-
                 <div className="mt-3">
                   <label className="text-[13px] text-certifica-dark block mb-1.5" style={{ fontWeight: 500 }}>
                     Membros da equipe
@@ -1427,10 +1627,7 @@ function NewProjectModal({ onClose, onCreate, clientesDisponiveis, saving }: {
                   </div>
                 </div>
               </div>
-
               <div className="border-t border-certifica-200" />
-
-              {/* Summary */}
               <div className="px-3 py-3 bg-certifica-50 border border-certifica-200 rounded-[3px]">
                 <div className="text-[10px] tracking-[0.06em] uppercase text-certifica-500 mb-2" style={{ fontWeight: 600 }}>
                   Resumo
@@ -1445,8 +1642,12 @@ function NewProjectModal({ onClose, onCreate, clientesDisponiveis, saving }: {
                     { label: "Equipe", value: equipeSelecionada.length > 0 ? equipeSelecionada.join(", ") : "—" },
                   ].map((item) => (
                     <div key={item.label} className="flex items-center justify-between">
-                      <span className="text-[10.5px] text-certifica-500" style={{ fontWeight: 400 }}>{item.label}</span>
-                      <span className="text-[10.5px] text-certifica-dark" style={{ fontWeight: 500 }}>{item.value}</span>
+                      <span className="text-[10.5px] text-certifica-500" style={{ fontWeight: 400 }}>
+                        {item.label}
+                      </span>
+                      <span className="text-[10.5px] text-certifica-dark" style={{ fontWeight: 500 }}>
+                        {item.value}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -1477,12 +1678,7 @@ function NewProjectModal({ onClose, onCreate, clientesDisponiveis, saving }: {
               Cancelar
             </DSButton>
             {step < 3 ? (
-              <DSButton
-                variant="primary"
-                size="sm"
-                onClick={handleNext}
-                icon={<ChevronRight className="w-3.5 h-3.5" strokeWidth={1.5} />}
-              >
+              <DSButton variant="primary" size="sm" onClick={handleNext} icon={<ChevronRight className="w-3.5 h-3.5" strokeWidth={1.5} />}>
                 Proximo
               </DSButton>
             ) : (
@@ -1497,6 +1693,44 @@ function NewProjectModal({ onClose, onCreate, clientesDisponiveis, saving }: {
               </DSButton>
             )}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
+   New Pipeline Modal
+   ══════════════════════════════════════════════════════════ */
+
+function NewPipelineModal({ onClose, onCreate }: { onClose: () => void; onCreate: (name: string, description: string) => void }) {
+  useBodyScrollLock(true);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-certifica-dark/40" onClick={onClose} />
+      <div className="relative bg-white rounded-[4px] border border-certifica-200 w-[400px] flex flex-col">
+        <div className="px-5 py-3.5 border-b border-certifica-200 flex items-center justify-between">
+          <span className="text-[14px] text-certifica-900" style={{ fontWeight: 600 }}>
+            Novo Pipeline
+          </span>
+          <button onClick={onClose} className="p-1 text-certifica-500/40 hover:text-certifica-dark transition-colors cursor-pointer">
+            <X className="w-4 h-4" strokeWidth={1.5} />
+          </button>
+        </div>
+        <div className="px-5 py-4 space-y-3">
+          <DSInput label="Nome do pipeline" placeholder="Ex: Vendas, Onboarding..." value={name} onChange={(e) => setName(e.target.value)} />
+          <DSTextarea label="Descrição (opcional)" placeholder="Descreva o propósito deste pipeline..." value={description} onChange={(e) => setDescription(e.target.value)} />
+        </div>
+        <div className="px-5 py-3.5 border-t border-certifica-200 flex items-center justify-end gap-2 bg-certifica-50/30">
+          <DSButton variant="ghost" size="sm" onClick={onClose}>
+            Cancelar
+          </DSButton>
+          <DSButton variant="primary" size="sm" disabled={!name.trim()} onClick={() => onCreate(name.trim(), description.trim())}>
+            Criar Pipeline
+          </DSButton>
         </div>
       </div>
     </div>
