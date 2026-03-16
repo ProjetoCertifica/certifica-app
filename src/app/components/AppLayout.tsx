@@ -416,7 +416,7 @@ export default function AppLayout() {
           <div
             className="overflow-hidden"
             style={{
-              maxHeight: showChildren ? `${(visibleChildren.length + (item.label === "Projetos" ? pipelines.length + 1 : 0)) * 36}px` : 0,
+              maxHeight: showChildren ? `${(visibleChildren.length + (item.label === "Projetos" ? pipelines.filter((p) => !p.is_default).length + 1 : 0)) * 36}px` : 0,
               opacity: showChildren ? 1 : 0,
               transition: `max-height ${TRANSITION}, opacity ${TRANSITION}`,
             }}
@@ -440,8 +440,8 @@ export default function AppLayout() {
                   </NavLink>
                 );
               })}
-              {/* Dynamic pipelines under Projetos */}
-              {item.label === "Projetos" && pipelines.map((pl) => {
+              {/* Dynamic pipelines under Projetos (only user-created, not default) */}
+              {item.label === "Projetos" && pipelines.filter((pl) => !pl.is_default).map((pl) => {
                 const plPath = `/projetos/p/${pl.id}`;
                 const isActive = location.pathname === plPath;
                 return (
