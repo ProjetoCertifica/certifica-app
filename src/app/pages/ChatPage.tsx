@@ -6,7 +6,7 @@ import {
   Image as ImageIcon, FileText, X, Plus, Download,
   Info, Trash2, Archive, Pin, Star, User, Users,
   Play, Pause, Bot, Clock, ArrowLeft, UserPlus, Contact,
-  FolderOpen,
+  FolderOpen, ChevronRight, Mail,
 } from 'lucide-react';
 import {
   getZApiStatus, getChats, sendText, sendImage, sendDocument, sendAudio,
@@ -191,6 +191,9 @@ export default function ChatPage() {
 
   // Sent/received documents for current chat
   const [chatDocHistory, setChatDocHistory] = useState<WhatsAppMessage[]>([]);
+
+  // Profile panel (right side)
+  const [showProfile, setShowProfile] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -575,6 +578,7 @@ export default function ChatPage() {
       setMessages([]);
       setLinkedContato(null);
       setEmpresaDocs([]);
+      setShowProfile(false);
       setChatDocHistory([]);
       linkedContatoRef.current = '';
     }
@@ -1117,12 +1121,8 @@ export default function ChatPage() {
               {/* Avatar + Name (clickable → opens empresa profile) */}
               {(() => {
                 const photo = getPhoto(selectedChat);
-                const chatPhoneDigits = chatPhone(selectedChat).replace(/\D/g, '');
-                const chatNameStr = chatLabel(selectedChat);
-                const handleProfileClick = chatPhoneDigits
-                  ? () => navigate(`/perfil/${chatPhoneDigits}?name=${encodeURIComponent(chatNameStr)}`)
-                  : undefined;
-                const canNavigate = !!chatPhoneDigits;
+                const handleProfileClick = () => setShowProfile(p => !p);
+                const canNavigate = true;
                 const clickClass = canNavigate ? 'cursor-pointer hover:opacity-80 transition-opacity' : '';
                 return (
                   <>
@@ -1517,6 +1517,154 @@ export default function ChatPage() {
           </>
         )}
       </main>
+
+      {/* ── PROFILE PANEL (right side) ── */}
+      {showProfile && selectedChat && (
+        <aside className="w-[320px] flex-shrink-0 border-l border-gray-200 bg-white flex flex-col overflow-y-auto hidden md:flex">
+          {/* Header */}
+          <div className="px-4 py-3 bg-[#f0f2f5] border-b border-gray-200 flex items-center justify-between">
+            <span className="text-[13px] font-semibold text-[#0F172A]">Perfil do Contato</span>
+            <button onClick={() => setShowProfile(false)} className="p-1 rounded-full hover:bg-gray-200 text-gray-500">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Avatar + Name */}
+          <div className="flex flex-col items-center py-6 px-4 border-b border-gray-100">
+            {(() => {
+              const photo = getPhoto(selectedChat);
+              const name = chatLabel(selectedChat);
+              const phone = chatPhone(selectedChat);
+              const seed = (phone || name).split('').reduce((a: number, c: string) => a + c.charCodeAt(0), 0);
+              const hue = Math.abs(seed) % 360;
+              return (
+                <>
+                  {photo ? (
+                    <img src={photo} alt="" className="w-20 h-20 rounded-full object-cover shadow-md mb-3" />
+                  ) : (
+                    <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md mb-3"
+                      style={{ background: `linear-gradient(135deg, hsl(${hue}, 60%, 50%), hsl(${(hue + 35) % 360}, 50%, 40%))` }}>
+                      {chatInitial(selectedChat)}
+                    </div>
+                  )}
+                  <h3 className="text-[15px] font-semibold text-[#0F172A] text-center">{name}</h3>
+                  <p className="text-[12px] text-gray-500">{formatPhone(toDigits(phone))}</p>
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Empresa vinculada */}
+          {linkedContato && (
+            <div className="px-4 py-3 border-b border-gray-100">
+              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2">Empresa</p>
+              <button
+                onClick={() => linkedContato.empresa_id ? navigate(`/clientes/${linkedContato.empresa_id}`) : undefined}
+                className="w-full flex items-center gap-2.5 px-3 py-2 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors cursor-pointer text-left"
+              >
+                <div className="w-8 h-8 rounded bg-[#2B8EAD]/10 flex items-center justify-center flex-shrink-0">
+                  <FolderOpen className="w-4 h-4 text-[#2B8EAD]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-[12px] font-medium text-[#0F172A] block truncate">{linkedContato.empresa_nome}</span>
+                  <span className="text-[10px] text-gray-400">{linkedContato.cargo || 'Contato'}</span>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
+              </button>
+            </div>
+          )}
+
+          {/* Contact info */}
+          {linkedContato && (
+            <div className="px-4 py-3 border-b border-gray-100">
+              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2">Informações</p>
+              <div className="space-y-2">
+                {linkedContato.nome && (
+                  <div className="flex items-center gap-2 text-[12px]">
+                    <User className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="text-[#0F172A]">{linkedContato.nome}</span>
+                    {linkedContato.cargo && <span className="text-gray-400">· {linkedContato.cargo}</span>}
+                  </div>
+                )}
+                {linkedContato.email && (
+                  <a href={`mailto:${linkedContato.email}`} className="flex items-center gap-2 text-[12px] text-[#2B8EAD] hover:underline">
+                    <Mail className="w-3.5 h-3.5" />
+                    {linkedContato.email}
+                  </a>
+                )}
+                {linkedContato.telefone && (
+                  <div className="flex items-center gap-2 text-[12px] text-gray-600">
+                    <Phone className="w-3.5 h-3.5 text-gray-400" />
+                    {linkedContato.telefone}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Arquivos trocados */}
+          <div className="px-4 py-3 flex-1">
+            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2">
+              Arquivos ({chatDocHistory.length})
+            </p>
+            {chatDocHistory.length === 0 ? (
+              <p className="text-[11px] text-gray-400 text-center py-4">Nenhum arquivo trocado</p>
+            ) : (
+              <div className="space-y-1.5">
+                {chatDocHistory.slice(0, 20).map((msg) => {
+                  const isImg = msg.message_type === 'image';
+                  const isDoc = msg.message_type === 'document';
+                  const isAudio = msg.message_type === 'audio';
+                  const isVideo = msg.message_type === 'video';
+                  const IconEl = isImg ? ImageIcon : isDoc ? FileText : isAudio ? Mic : isVideo ? Play : Paperclip;
+                  const iconBg = isImg ? 'bg-amber-50 text-amber-500' : isDoc ? 'bg-blue-50 text-blue-500' : 'bg-green-50 text-green-500';
+                  return (
+                    <div key={msg.id} className="flex items-center gap-2.5 p-2 rounded-md hover:bg-gray-50 transition-colors">
+                      <div className={`w-8 h-8 rounded flex items-center justify-center flex-shrink-0 ${iconBg}`}>
+                        <IconEl className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] text-[#0F172A] truncate font-medium">
+                          {msg.body || `[${msg.message_type}]`}
+                        </p>
+                        <p className="text-[10px] text-gray-400">
+                          {msg.from_me ? 'Enviado' : 'Recebido'} · {msg.timestamp ? new Date(msg.timestamp).toLocaleDateString('pt-BR') : ''}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Docs da empresa */}
+          {empresaDocs.length > 0 && (
+            <div className="px-4 py-3 border-t border-gray-100">
+              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2">
+                Docs da Empresa ({empresaDocs.length})
+              </p>
+              <div className="space-y-1.5">
+                {empresaDocs.slice(0, 10).map((doc: any) => (
+                  <button
+                    key={doc.id}
+                    onClick={() => navigate('/documentos')}
+                    className="w-full flex items-center gap-2.5 p-2 rounded-md hover:bg-gray-50 transition-colors text-left cursor-pointer"
+                  >
+                    <div className="w-8 h-8 rounded bg-blue-50 flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-3.5 h-3.5 text-blue-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] text-[#0F172A] truncate font-medium">{doc.codigo} — {doc.titulo}</p>
+                      <p className="text-[10px] text-gray-400">{doc.tipo} · {doc.status}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </aside>
+      )}
     </div>
   );
 }
