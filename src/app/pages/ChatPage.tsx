@@ -1615,18 +1615,10 @@ export default function ChatPage() {
                   <Phone className="w-4 h-4 text-gray-400" />
                   <span className="text-[#0F172A]">{formatPhone(toDigits(profilePhone))}</span>
                 </div>
-                {linkedContato?.email && (
-                  <a href={`mailto:${linkedContato.email}`} className="flex items-center gap-2.5 text-[12px] text-[#2B8EAD] hover:underline">
-                    <Mail className="w-4 h-4" />
-                    {linkedContato.email}
-                  </a>
-                )}
-                {linkedContato && (
-                  <div className="flex items-center gap-2.5 text-[12px]">
-                    <User className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-500">Contato de {linkedContato.empresa_nome}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-2.5 text-[12px]">
+                  <MessageSquare className="w-4 h-4 text-gray-400" />
+                  <span className="text-gray-500">WhatsApp</span>
+                </div>
               </div>
             </div>
 
