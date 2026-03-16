@@ -243,7 +243,7 @@ export default function ContatoPerfilPage() {
     );
   }
 
-  const profileName = contato?.nome || displayName || displayPhone;
+  const profileName = displayName || displayPhone;
 
   return (
     <div className="h-full overflow-y-auto">
