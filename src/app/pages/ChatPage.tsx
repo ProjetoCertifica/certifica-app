@@ -1562,7 +1562,7 @@ export default function ChatPage() {
         }
 
         return (
-          <aside className="w-[400px] flex-shrink-0 border-l border-gray-200 bg-white flex flex-col overflow-y-auto hidden md:flex">
+          <aside className="w-[400px] flex-shrink-0 border-l border-gray-200 bg-white flex flex-col overflow-y-auto hidden md:flex certifica-modal-slide">
             {/* Header */}
             <div className="px-5 py-3 bg-[#f0f2f5] border-b border-gray-200 flex items-center justify-between">
               <span className="text-[14px] font-semibold text-[#0F172A]">Perfil do Contato</span>
