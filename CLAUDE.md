@@ -7,7 +7,7 @@ Plataforma de gestao de certificacao ISO e compliance para consultorias brasilei
 - **Frontend:** React 18 + TypeScript + Vite 6 + Tailwind CSS 4
 - **UI:** Radix UI / shadcn + Design System proprio (componentes DS*)
 - **Backend:** Supabase (PostgreSQL + Auth + Storage + Realtime)
-- **Deploy:** Vercel (serverless functions em /api)
+- **Deploy:** Cloudflare Pages (Functions em /functions)
 - **Integracoes:** OpenAI, Recall.ai, Google Calendar, WhatsApp (Zapi)
 
 ## Estrutura principal
@@ -15,7 +15,7 @@ Plataforma de gestao de certificacao ISO e compliance para consultorias brasilei
 - `src/app/components/ui/` - Componentes UI (Radix wrappers)
 - `src/app/components/ds/` - Design System customizado
 - `src/app/lib/` - Hooks customizados (useClientes, useProjetos, useDocuments, etc.) e utilitarios
-- `api/` - Serverless functions Vercel (proxy seguro para APIs externas)
+- `functions/` - Cloudflare Pages Functions (proxy seguro para APIs externas)
 - `supabase/migrations/` - Migracoes do banco de dados
 
 ## Modulos principais
@@ -31,7 +31,7 @@ Plataforma de gestao de certificacao ISO e compliance para consultorias brasilei
 ## Padroes do projeto
 - Hooks customizados `useX` para toda logica de dados com Supabase
 - Componentes DS* wrappam Radix UI para design consistente
-- API keys protegidas via serverless functions (nunca expostas no client)
+- API keys protegidas via Cloudflare Pages Functions (nunca expostas no client)
 - Supabase realtime para atualizacoes ao vivo
 - Toda interface em portugues (pt-BR)
 - TypeScript com tipos auto-gerados do Supabase (`database.types.ts`)
@@ -50,5 +50,21 @@ Pasta de logs do projeto: `projects/certifica-log.md`
 ```bash
 npm run dev      # Servidor de desenvolvimento
 npm run build    # Build de producao
-npm run preview  # Preview do build
 ```
+
+## Cloudflare Pages Functions
+As functions ficam em `functions/` e seguem o formato Cloudflare Workers (Web Standards API).
+Cada function exporta `onRequest: PagesFunction<Env>` e acessa env vars via `context.env`.
+
+Mapeamento de rotas:
+- `functions/openai.ts` → POST /api/openai
+- `functions/google/auth.ts` → GET /api/google/auth
+- `functions/google/callback.ts` → GET /api/google/callback
+- `functions/google/events.ts` → POST /api/google/events
+- `functions/recall-api/[[path]].ts` → /api/recall-api/* (catch-all proxy)
+- `functions/recall/calendar-connect.ts` → POST /api/recall/calendar-connect
+- `functions/recall/calendar-meetings.ts` → GET /api/recall/calendar-meetings
+- `functions/zapi-webhook.ts` → POST /api/zapi-webhook
+- `functions/zapi/index.ts` → /api/zapi?action=...
+
+Variável APP_URL deve ser configurada no Cloudflare Pages com a URL do site (ex: https://certifica.com.br).
