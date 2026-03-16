@@ -16,6 +16,7 @@ import {
 import { supabase } from '../lib/supabase';
 import type { WhatsAppMessage, Document } from '../lib/database.types';
 import { findContatoByPhone, type ContatoWithEmpresa } from '../lib/useContatos';
+import { usePipeline, type PipelineColumn, type PipelineCard } from '../lib/usePipeline';
 import { toast } from 'sonner';
 
 /* ── types ───────────────────────────────────────── */
@@ -194,6 +195,9 @@ export default function ChatPage() {
 
   // Profile panel (right side)
   const [showProfile, setShowProfile] = useState(false);
+
+  // Pipeline (kanban)
+  const pipeline = usePipeline();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -1722,6 +1726,83 @@ export default function ChatPage() {
             </div>
 
             {/* Docs da empresa */}
+            {/* Pipeline / Kanban */}
+            {(() => {
+              const phoneDigits = toDigits(profilePhone);
+              const contactName = profileName;
+              // Find existing card for this contact
+              const existingCard = pipeline.allCards.find((c: PipelineCard) => {
+                try {
+                  const desc = JSON.parse(c.description || '{}');
+                  return desc.phone === phoneDigits || desc.contato_phone === phoneDigits;
+                } catch { return false; }
+              });
+              const currentCol = existingCard
+                ? pipeline.columns.find((col) => col.id === existingCard.column_id)
+                : null;
+
+              const handleMoveToColumn = async (colId: string) => {
+                if (existingCard) {
+                  // Move existing card
+                  await pipeline.moveCard(existingCard.id, existingCard.column_id, colId);
+                } else {
+                  // Create new card in selected column
+                  await pipeline.createCard({
+                    column_id: colId,
+                    title: contactName,
+                    description: JSON.stringify({ phone: phoneDigits, contato_phone: phoneDigits, source: 'chat' }),
+                    position: 0,
+                    assigned_to: '',
+                    due_date: null,
+                    tags: [],
+                    sla_days: 7,
+                    projeto_id: null,
+                  });
+                }
+                await pipeline.load();
+              };
+
+              return (
+                <div className="px-5 py-4 border-b border-gray-100">
+                  <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2.5">
+                    Pipeline
+                    {currentCol && (
+                      <span className="ml-1.5 text-[9px] normal-case tracking-normal text-[#2B8EAD] font-medium">
+                        — {currentCol.title}
+                      </span>
+                    )}
+                  </p>
+                  <div className="space-y-1">
+                    {pipeline.columns.map((col) => {
+                      const isActive = currentCol?.id === col.id;
+                      return (
+                        <button
+                          key={col.id}
+                          onClick={() => handleMoveToColumn(col.id)}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-colors cursor-pointer ${
+                            isActive
+                              ? 'bg-[#2B8EAD]/10 border border-[#2B8EAD]/30'
+                              : 'hover:bg-gray-50 border border-transparent'
+                          }`}
+                        >
+                          <div
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: col.color || '#6B7280' }}
+                          />
+                          <span className={`text-[12px] flex-1 ${isActive ? 'text-[#2B8EAD] font-semibold' : 'text-[#0F172A] font-medium'}`}>
+                            {col.title}
+                          </span>
+                          {isActive && (
+                            <Check className="w-4 h-4 text-[#2B8EAD] flex-shrink-0" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {empresaDocs.length > 0 && (
               <div className="px-5 py-4">
                 <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2.5">
