@@ -19,6 +19,7 @@ import ConfiguracoesPage from "./pages/ConfiguracoesPage";
 import NormasPage from "./pages/NormasPage";
 import TreinamentosPage from "./pages/TreinamentosPage";
 import CalendarioPage from "./pages/CalendarioPage";
+import ClientePerfilPage from "./pages/ClientePerfilPage";
 
 export const router = createBrowserRouter([
   // Public route — no layout
@@ -34,6 +35,7 @@ export const router = createBrowserRouter([
       { path: "chat", Component: ChatPage },
 
       { path: "clientes", Component: ClientesPage },
+      { path: "clientes/:id", Component: ClientePerfilPage },
       { path: "projetos", Component: ProjetosPage },
       { path: "projetos/pipeline", Component: PipelinePage },
       { path: "documentos", Component: DocumentosPage },

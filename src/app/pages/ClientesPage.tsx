@@ -355,7 +355,7 @@ export default function ClientesPage() {
               {filtered.map((c) => {
                 const st = statusMap[c.status];
                 return (
-                  <tr key={c.id} onClick={() => setSelectedId(c.id)} className={`border-b border-certifica-200/60 cursor-pointer transition-colors ${selectedId === c.id ? "bg-certifica-50" : "hover:bg-certifica-50/50"}`}>
+                  <tr key={c.id} onClick={() => navigate(`/clientes/${c.id}`)} className={`border-b border-certifica-200/60 cursor-pointer transition-colors hover:bg-certifica-50/50`}>
                     <td className="px-3 py-2.5"><span className="text-[11.5px] text-certifica-700 font-mono" style={{ fontWeight: 500 }}>{c.cnpj}</span></td>
                     <td className="px-3 py-2.5">
                       <span className="text-[12.5px] text-certifica-dark block" style={{ fontWeight: 500 }}>{c.nomeFantasia}</span>
