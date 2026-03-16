@@ -31,7 +31,9 @@ import {
   AlertCircle,
   CheckCircle2,
   Menu,
+  Plus,
 } from "lucide-react";
+import { usePipelines } from "../lib/usePipelines";
 import { useGlobalSearch, type SearchResult } from "../lib/useGlobalSearch";
 import { useNotifications } from "../lib/useNotifications";
 import { useSmartNotifications } from "../lib/useSmartNotifications";
@@ -55,7 +57,13 @@ const navItems: NavItem[] = [
   { path: "/calendario", label: "Calendário", icon: CalendarDays },
   { path: "/chat", label: "Chat", icon: MessageSquare },
   { path: "/clientes", label: "Empresas", icon: Users },
-  { path: "/projetos", label: "Projetos", icon: FolderKanban },
+  {
+    label: "Projetos",
+    icon: FolderKanban,
+    children: [
+      { path: "/projetos", label: "Visão Geral" },
+    ],
+  },
   { path: "/documentos", label: "Documentos", icon: FolderOpen },
   {
     label: "Auditorias",
@@ -154,6 +162,7 @@ export default function AppLayout() {
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ── Hooks ── */
+  const { pipelines, create: createPipeline } = usePipelines();
   const globalSearch = useGlobalSearch();
   const { notifications: supabaseNotifs, markAsRead: supabaseMarkAsRead, markAllAsRead: supabaseMarkAllAsRead } = useNotifications();
   const { connected: gcalConnected, meetings: calMeetings, fetchMeetings: fetchCalMeetings } = useGoogleCalendar();
@@ -407,7 +416,7 @@ export default function AppLayout() {
           <div
             className="overflow-hidden"
             style={{
-              maxHeight: showChildren ? `${visibleChildren.length * 36}px` : 0,
+              maxHeight: showChildren ? `${(visibleChildren.length + (item.label === "Projetos" ? pipelines.length + 1 : 0)) * 36}px` : 0,
               opacity: showChildren ? 1 : 0,
               transition: `max-height ${TRANSITION}, opacity ${TRANSITION}`,
             }}
@@ -431,6 +440,44 @@ export default function AppLayout() {
                   </NavLink>
                 );
               })}
+              {/* Dynamic pipelines under Projetos */}
+              {item.label === "Projetos" && pipelines.map((pl) => {
+                const plPath = `/projetos/p/${pl.id}`;
+                const isActive = location.pathname === plPath;
+                return (
+                  <NavLink
+                    key={pl.id}
+                    to={plPath}
+                    className={`flex items-center pl-3 py-[6px] rounded-r-[3px] whitespace-nowrap transition-colors duration-150 ${
+                      isActive
+                        ? "text-certifica-accent-dark bg-certifica-accent-light"
+                        : "text-certifica-500 hover:text-certifica-dark hover:bg-certifica-50"
+                    }`}
+                  >
+                    <span className="text-[12px] truncate max-w-[130px]" style={{ fontWeight: isActive ? 500 : 400 }}>
+                      {pl.name}
+                    </span>
+                  </NavLink>
+                );
+              })}
+              {item.label === "Projetos" && (
+                <button
+                  onClick={async () => {
+                    const name = prompt("Nome do pipeline:");
+                    if (name && name.trim()) {
+                      const created = await createPipeline({ name: name.trim(), description: "", icon: "kanban", is_default: false });
+                      if (created) {
+                        navigate(`/projetos/p/${created.id}`);
+                        toast.success("Pipeline criado!");
+                      }
+                    }
+                  }}
+                  className="flex items-center gap-1 pl-3 py-[6px] text-certifica-accent/70 hover:text-certifica-accent transition-colors cursor-pointer whitespace-nowrap"
+                >
+                  <Plus className="w-3 h-3" strokeWidth={1.5} />
+                  <span className="text-[11px]" style={{ fontWeight: 500 }}>Criar pipeline</span>
+                </button>
+              )}
             </div>
           </div>
           {!effectivelyOpen && (

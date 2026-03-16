@@ -10,6 +10,7 @@ import AuditClosurePage from "./pages/AuditClosurePage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import ClientesPage from "./pages/ClientesPage";
 import ProjetosPage from "./pages/ProjetosPage";
+import PipelineCustomPage from "./pages/PipelineCustomPage";
 
 import LoginPage from "./pages/LoginPage";
 
@@ -40,6 +41,7 @@ export const router = createBrowserRouter([
       { path: "contatos/:id", Component: ContatoPerfilPage },
       { path: "perfil/:phone", Component: ContatoPerfilPage },
       { path: "projetos", Component: ProjetosPage },
+      { path: "projetos/p/:id", Component: PipelineCustomPage },
       { path: "documentos", Component: DocumentosPage },
       { path: "auditorias", Component: AuditoriasPage },
       { path: "auditorias/rai", Component: AuditReportPage },
