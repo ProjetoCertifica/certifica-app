@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
 import { supabase } from "../lib/supabase";
 import { useCliente360 } from "../lib/useCliente360";
@@ -12,7 +12,7 @@ import {
   ArrowLeft, Building2, MapPin, Phone, Mail, MessageSquare, Shield,
   FileText, FolderOpen, ClipboardCheck, Video, Download, ExternalLink,
   Search, UserCircle, Briefcase, Calendar, Hash, Loader2, Users,
-  ChevronRight,
+  ChevronRight, Camera,
 } from "lucide-react";
 
 /* ── Types ── */
@@ -33,6 +33,7 @@ interface ClienteRow {
   uf: string;
   consultor_responsavel: string;
   created_at: string;
+  logo_url: string | null;
 }
 
 type TabKey = "documentos" | "projetos" | "auditorias" | "reunioes";
@@ -55,8 +56,11 @@ const docStatusMap: Record<string, { label: string; variant: "conformidade" | "n
   obsoleto: { label: "Obsoleto", variant: "nao-conformidade" },
 };
 
-/* ── Avatar Component ── */
-function CompanyAvatar({ name, id }: { name: string; id: string }) {
+/* ── Avatar Component with Upload ── */
+function CompanyAvatar({ name, id, logoUrl, onLogoChange }: { name: string; id: string; logoUrl?: string | null; onLogoChange?: (url: string) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
   const initials = name
     .split(/\s+/)
     .filter(Boolean)
@@ -64,15 +68,57 @@ function CompanyAvatar({ name, id }: { name: string; id: string }) {
     .map((w) => w[0]?.toUpperCase() ?? "")
     .join("");
 
-  // Deterministic color based on id
   const hue = Math.abs(id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)) % 360;
 
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onLogoChange) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `logos/${id}.${ext}`;
+      const { error: uploadErr } = await supabase.storage
+        .from("Certifica Arquivos")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (uploadErr) throw uploadErr;
+      const { data: urlData } = supabase.storage.from("Certifica Arquivos").getPublicUrl(path);
+      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+      await supabase.from("clientes").update({ logo_url: publicUrl }).eq("id", id);
+      onLogoChange(publicUrl);
+    } catch (err) {
+      console.error("Upload error:", err);
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
   return (
-    <div
-      className="w-16 h-16 rounded-xl flex items-center justify-center text-white text-xl flex-shrink-0 shadow-lg"
-      style={{ fontWeight: 700, background: `linear-gradient(135deg, hsl(${hue}, 65%, 50%), hsl(${(hue + 40) % 360}, 55%, 40%))` }}
-    >
-      {initials || "?"}
+    <div className="relative group flex-shrink-0">
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+      {logoUrl ? (
+        <img src={logoUrl} alt={name} className="w-16 h-16 rounded-xl object-cover shadow-lg" />
+      ) : (
+        <div
+          className="w-16 h-16 rounded-xl flex items-center justify-center text-white text-xl shadow-lg"
+          style={{ fontWeight: 700, background: `linear-gradient(135deg, hsl(${hue}, 65%, 50%), hsl(${(hue + 40) % 360}, 55%, 40%))` }}
+        >
+          {initials || "?"}
+        </div>
+      )}
+      {onLogoChange && (
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="absolute inset-0 rounded-xl bg-black/0 group-hover:bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+        >
+          {uploading ? (
+            <Loader2 className="w-5 h-5 text-white animate-spin" />
+          ) : (
+            <Camera className="w-5 h-5 text-white" strokeWidth={1.5} />
+          )}
+        </button>
+      )}
     </div>
   );
 }
@@ -191,7 +237,12 @@ export default function ClientePerfilPage() {
         <div className="bg-white border border-certifica-200 rounded-lg p-6 mb-5">
           <div className="flex flex-col sm:flex-row gap-5">
             {/* Avatar + Info */}
-            <CompanyAvatar name={cliente.nome_fantasia} id={cliente.id} />
+            <CompanyAvatar
+              name={cliente.nome_fantasia}
+              id={cliente.id}
+              logoUrl={cliente.logo_url}
+              onLogoChange={(url) => setCliente((prev) => prev ? { ...prev, logo_url: url } : prev)}
+            />
 
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-start gap-2 mb-1">

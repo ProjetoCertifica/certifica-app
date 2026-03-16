@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useNavigate } from 'react-router';
 import {
   Send, Loader2, Search, MessageSquare, Smile, Paperclip, Mic, Square,
   MoreVertical, Check, CheckCheck, Wifi, Phone,
@@ -122,6 +123,7 @@ const EMOJI_CATEGORIES: { label: string; emojis: string[] }[] = [
 /* ── component ───────────────────────────────────── */
 
 export default function ChatPage() {
+  const navigate = useNavigate();
   const [status, setStatus] = useState<ZApiStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
   const [chats, setChats] = useState<ZApiChat[]>([]);
@@ -1112,29 +1114,38 @@ export default function ChatPage() {
                 <ArrowLeft className="w-5 h-5" />
               </button>
 
-              {/* Avatar */}
+              {/* Avatar + Name (clickable → opens empresa profile) */}
               {(() => {
                 const photo = getPhoto(selectedChat);
-                return photo ? (
-                  <img src={photo} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
-                ) : (
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-medium ${selectedChat.isGroup ? 'bg-[#2B8EAD]' : avatarColor(chatId(selectedChat))}`}>
-                    {selectedChat.isGroup ? <Users className="w-5 h-5" /> : chatInitial(selectedChat)}
-                  </div>
+                const canNavigate = !!linkedContato?.empresa_id;
+                const handleProfileClick = canNavigate ? () => navigate(`/clientes/${linkedContato!.empresa_id}`) : undefined;
+                const clickClass = canNavigate ? 'cursor-pointer hover:opacity-80 transition-opacity' : '';
+                return (
+                  <>
+                    <div onClick={handleProfileClick} className={`flex-shrink-0 ${clickClass}`}>
+                      {photo ? (
+                        <img src={photo} alt="" className="w-10 h-10 rounded-full object-cover" />
+                      ) : (
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-medium ${selectedChat.isGroup ? 'bg-[#2B8EAD]' : avatarColor(chatId(selectedChat))}`}>
+                          {selectedChat.isGroup ? <Users className="w-5 h-5" /> : chatInitial(selectedChat)}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className={`flex-1 min-w-0 ${clickClass}`} onClick={handleProfileClick}>
+                      <h3 className="text-sm font-semibold text-[#0F172A] truncate">{chatLabel(selectedChat)}</h3>
+                      <div className="flex items-center gap-2">
+                        <p className="text-[11px] text-gray-500 truncate">{formatPhone(chatPhone(selectedChat))}</p>
+                        {linkedContato && (
+                          <span className="text-[9px] bg-[#2B8EAD]/10 text-[#2B8EAD] px-1.5 py-0.5 rounded font-medium truncate max-w-[120px]">
+                            {linkedContato.empresa_nome}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </>
                 );
               })()}
-
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-semibold text-[#0F172A] truncate">{chatLabel(selectedChat)}</h3>
-                <div className="flex items-center gap-2">
-                  <p className="text-[11px] text-gray-500 truncate">{formatPhone(chatPhone(selectedChat))}</p>
-                  {linkedContato && (
-                    <span className="text-[9px] bg-[#2B8EAD]/10 text-[#2B8EAD] px-1.5 py-0.5 rounded font-medium truncate max-w-[120px]">
-                      {linkedContato.empresa_nome}
-                    </span>
-                  )}
-                </div>
-              </div>
 
               {/* Actions */}
               <div className="flex items-center gap-1 relative" ref={chatMenuRef}>
