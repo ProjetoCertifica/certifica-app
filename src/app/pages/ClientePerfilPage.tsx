@@ -94,10 +94,10 @@ function CompanyAvatar({ name, id, logoUrl, onLogoChange }: { name: string; id: 
   };
 
   return (
-    <div className="relative group flex-shrink-0">
+    <div className="relative group flex-shrink-0 w-16 h-16">
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
       {logoUrl ? (
-        <img src={logoUrl} alt={name} className="w-16 h-16 rounded-xl object-cover shadow-lg" />
+        <img src={logoUrl} alt={name} className="w-16 h-16 rounded-xl object-cover shadow-lg block" />
       ) : (
         <div
           className="w-16 h-16 rounded-xl flex items-center justify-center text-white text-xl shadow-lg"

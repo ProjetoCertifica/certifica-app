@@ -1117,8 +1117,8 @@ export default function ChatPage() {
               {/* Avatar + Name (clickable → opens empresa profile) */}
               {(() => {
                 const photo = getPhoto(selectedChat);
-                const canNavigate = !!linkedContato?.empresa_id;
-                const handleProfileClick = canNavigate ? () => navigate(`/clientes/${linkedContato!.empresa_id}`) : undefined;
+                const canNavigate = !!linkedContato?.id;
+                const handleProfileClick = canNavigate ? () => navigate(`/contatos/${linkedContato!.id}`) : undefined;
                 const clickClass = canNavigate ? 'cursor-pointer hover:opacity-80 transition-opacity' : '';
                 return (
                   <>
