@@ -1519,152 +1519,168 @@ export default function ChatPage() {
       </main>
 
       {/* ── PROFILE PANEL (right side) ── */}
-      {showProfile && selectedChat && (
-        <aside className="w-[320px] flex-shrink-0 border-l border-gray-200 bg-white flex flex-col overflow-y-auto hidden md:flex">
-          {/* Header */}
-          <div className="px-4 py-3 bg-[#f0f2f5] border-b border-gray-200 flex items-center justify-between">
-            <span className="text-[13px] font-semibold text-[#0F172A]">Perfil do Contato</span>
-            <button onClick={() => setShowProfile(false)} className="p-1 rounded-full hover:bg-gray-200 text-gray-500">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+      {showProfile && selectedChat && (() => {
+        const profilePhoto = getPhoto(selectedChat);
+        const profileName = chatLabel(selectedChat);
+        const profilePhone = chatPhone(selectedChat);
+        const profileSeed = (profilePhone || profileName).split('').reduce((a: number, c: string) => a + c.charCodeAt(0), 0);
+        const profileHue = Math.abs(profileSeed) % 360;
+        const receivedFiles = chatDocHistory.filter(m => !m.from_me);
+        const sentFiles = chatDocHistory.filter(m => m.from_me);
 
-          {/* Avatar + Name */}
-          <div className="flex flex-col items-center py-6 px-4 border-b border-gray-100">
-            {(() => {
-              const photo = getPhoto(selectedChat);
-              const name = chatLabel(selectedChat);
-              const phone = chatPhone(selectedChat);
-              const seed = (phone || name).split('').reduce((a: number, c: string) => a + c.charCodeAt(0), 0);
-              const hue = Math.abs(seed) % 360;
-              return (
-                <>
-                  {photo ? (
-                    <img src={photo} alt="" className="w-20 h-20 rounded-full object-cover shadow-md mb-3" />
-                  ) : (
-                    <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md mb-3"
-                      style={{ background: `linear-gradient(135deg, hsl(${hue}, 60%, 50%), hsl(${(hue + 35) % 360}, 50%, 40%))` }}>
-                      {chatInitial(selectedChat)}
-                    </div>
-                  )}
-                  <h3 className="text-[15px] font-semibold text-[#0F172A] text-center">{name}</h3>
-                  <p className="text-[12px] text-gray-500">{formatPhone(toDigits(phone))}</p>
-                </>
-              );
-            })()}
-          </div>
+        function renderFileItem(msg: WhatsAppMessage) {
+          const isImg = msg.message_type === 'image';
+          const isDoc = msg.message_type === 'document';
+          const isAudio = msg.message_type === 'audio';
+          const isVideo = msg.message_type === 'video';
+          const IconEl = isImg ? ImageIcon : isDoc ? FileText : isAudio ? Mic : isVideo ? Play : Paperclip;
+          const iconBg = isImg ? 'bg-amber-50 text-amber-500' : isDoc ? 'bg-blue-50 text-blue-500' : 'bg-green-50 text-green-500';
+          // Try to extract media URL from raw payload
+          const raw = msg.raw as Record<string, any> | undefined;
+          const mediaUrl = raw?.image?.imageUrl || raw?.image?.url || raw?.document?.documentUrl || raw?.document?.url || raw?.video?.videoUrl || raw?.audio?.audioUrl || null;
 
-          {/* Empresa vinculada */}
-          {linkedContato && (
-            <div className="px-4 py-3 border-b border-gray-100">
-              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2">Empresa</p>
-              <button
-                onClick={() => linkedContato.empresa_id ? navigate(`/clientes/${linkedContato.empresa_id}`) : undefined}
-                className="w-full flex items-center gap-2.5 px-3 py-2 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors cursor-pointer text-left"
-              >
-                <div className="w-8 h-8 rounded bg-[#2B8EAD]/10 flex items-center justify-center flex-shrink-0">
-                  <FolderOpen className="w-4 h-4 text-[#2B8EAD]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-[12px] font-medium text-[#0F172A] block truncate">{linkedContato.empresa_nome}</span>
-                  <span className="text-[10px] text-gray-400">{linkedContato.cargo || 'Contato'}</span>
-                </div>
-                <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
+          return (
+            <div
+              key={msg.id}
+              onClick={() => mediaUrl && window.open(mediaUrl, '_blank')}
+              className={`flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-gray-50 transition-colors ${mediaUrl ? 'cursor-pointer' : ''}`}
+            >
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${iconBg}`}>
+                <IconEl className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[12px] text-[#0F172A] truncate font-medium">
+                  {msg.body || `[${msg.message_type}]`}
+                </p>
+                <p className="text-[10px] text-gray-400">
+                  {msg.timestamp ? new Date(msg.timestamp).toLocaleDateString('pt-BR') : ''}
+                </p>
+              </div>
+              {mediaUrl && <Download className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />}
+            </div>
+          );
+        }
+
+        return (
+          <aside className="w-[400px] flex-shrink-0 border-l border-gray-200 bg-white flex flex-col overflow-y-auto hidden md:flex">
+            {/* Header */}
+            <div className="px-5 py-3 bg-[#f0f2f5] border-b border-gray-200 flex items-center justify-between">
+              <span className="text-[14px] font-semibold text-[#0F172A]">Perfil do Contato</span>
+              <button onClick={() => setShowProfile(false)} className="p-1.5 rounded-full hover:bg-gray-200 text-gray-500">
+                <X className="w-4 h-4" />
               </button>
             </div>
-          )}
 
-          {/* Contact info */}
-          {linkedContato && (
-            <div className="px-4 py-3 border-b border-gray-100">
-              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2">Informações</p>
-              <div className="space-y-2">
-                {linkedContato.nome && (
-                  <div className="flex items-center gap-2 text-[12px]">
-                    <User className="w-3.5 h-3.5 text-gray-400" />
-                    <span className="text-[#0F172A]">{linkedContato.nome}</span>
-                    {linkedContato.cargo && <span className="text-gray-400">· {linkedContato.cargo}</span>}
+            {/* Avatar + Name */}
+            <div className="flex flex-col items-center py-8 px-5 border-b border-gray-100 bg-gradient-to-b from-gray-50 to-white">
+              {profilePhoto ? (
+                <img src={profilePhoto} alt="" className="w-24 h-24 rounded-full object-cover shadow-lg mb-4 ring-4 ring-white" />
+              ) : (
+                <div className="w-24 h-24 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg mb-4 ring-4 ring-white"
+                  style={{ background: `linear-gradient(135deg, hsl(${profileHue}, 60%, 50%), hsl(${(profileHue + 35) % 360}, 50%, 40%))` }}>
+                  {chatInitial(selectedChat)}
+                </div>
+              )}
+              <h3 className="text-[18px] font-semibold text-[#0F172A] text-center">{profileName}</h3>
+              <p className="text-[13px] text-gray-500 mt-0.5">{formatPhone(toDigits(profilePhone))}</p>
+            </div>
+
+            {/* Empresa vinculada */}
+            {linkedContato && (
+              <div className="px-5 py-4 border-b border-gray-100">
+                <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2.5">Empresa</p>
+                <button
+                  onClick={() => linkedContato.empresa_id ? navigate(`/clientes/${linkedContato.empresa_id}`) : undefined}
+                  className="w-full flex items-center gap-3 px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer text-left"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-[#2B8EAD]/10 flex items-center justify-center flex-shrink-0">
+                    <FolderOpen className="w-5 h-5 text-[#2B8EAD]" />
                   </div>
-                )}
-                {linkedContato.email && (
-                  <a href={`mailto:${linkedContato.email}`} className="flex items-center gap-2 text-[12px] text-[#2B8EAD] hover:underline">
-                    <Mail className="w-3.5 h-3.5" />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[13px] font-medium text-[#0F172A] block truncate">{linkedContato.empresa_nome}</span>
+                    <span className="text-[11px] text-gray-400">Cargo não especificado</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-300" />
+                </button>
+              </div>
+            )}
+
+            {/* Contact details */}
+            <div className="px-5 py-4 border-b border-gray-100">
+              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2.5">Informações</p>
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2.5 text-[12px]">
+                  <Phone className="w-4 h-4 text-gray-400" />
+                  <span className="text-[#0F172A]">{formatPhone(toDigits(profilePhone))}</span>
+                </div>
+                {linkedContato?.email && (
+                  <a href={`mailto:${linkedContato.email}`} className="flex items-center gap-2.5 text-[12px] text-[#2B8EAD] hover:underline">
+                    <Mail className="w-4 h-4" />
                     {linkedContato.email}
                   </a>
                 )}
-                {linkedContato.telefone && (
-                  <div className="flex items-center gap-2 text-[12px] text-gray-600">
-                    <Phone className="w-3.5 h-3.5 text-gray-400" />
-                    {linkedContato.telefone}
+                {linkedContato && (
+                  <div className="flex items-center gap-2.5 text-[12px]">
+                    <User className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-500">Contato de {linkedContato.empresa_nome}</span>
                   </div>
                 )}
               </div>
             </div>
-          )}
 
-          {/* Arquivos trocados */}
-          <div className="px-4 py-3 flex-1">
-            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2">
-              Arquivos ({chatDocHistory.length})
-            </p>
-            {chatDocHistory.length === 0 ? (
-              <p className="text-[11px] text-gray-400 text-center py-4">Nenhum arquivo trocado</p>
-            ) : (
-              <div className="space-y-1.5">
-                {chatDocHistory.slice(0, 20).map((msg) => {
-                  const isImg = msg.message_type === 'image';
-                  const isDoc = msg.message_type === 'document';
-                  const isAudio = msg.message_type === 'audio';
-                  const isVideo = msg.message_type === 'video';
-                  const IconEl = isImg ? ImageIcon : isDoc ? FileText : isAudio ? Mic : isVideo ? Play : Paperclip;
-                  const iconBg = isImg ? 'bg-amber-50 text-amber-500' : isDoc ? 'bg-blue-50 text-blue-500' : 'bg-green-50 text-green-500';
-                  return (
-                    <div key={msg.id} className="flex items-center gap-2.5 p-2 rounded-md hover:bg-gray-50 transition-colors">
-                      <div className={`w-8 h-8 rounded flex items-center justify-center flex-shrink-0 ${iconBg}`}>
-                        <IconEl className="w-3.5 h-3.5" />
+            {/* Arquivos RECEBIDOS */}
+            <div className="px-5 py-4 border-b border-gray-100">
+              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2.5">
+                <span className="inline-flex items-center gap-1"><Download className="w-3 h-3" /> Recebidos ({receivedFiles.length})</span>
+              </p>
+              {receivedFiles.length === 0 ? (
+                <p className="text-[11px] text-gray-400 text-center py-3">Nenhum arquivo recebido</p>
+              ) : (
+                <div className="space-y-1">{receivedFiles.slice(0, 15).map(renderFileItem)}</div>
+              )}
+            </div>
+
+            {/* Arquivos ENVIADOS */}
+            <div className="px-5 py-4 border-b border-gray-100">
+              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2.5">
+                <span className="inline-flex items-center gap-1"><Send className="w-3 h-3" /> Enviados ({sentFiles.length})</span>
+              </p>
+              {sentFiles.length === 0 ? (
+                <p className="text-[11px] text-gray-400 text-center py-3">Nenhum arquivo enviado</p>
+              ) : (
+                <div className="space-y-1">{sentFiles.slice(0, 15).map(renderFileItem)}</div>
+              )}
+            </div>
+
+            {/* Docs da empresa */}
+            {empresaDocs.length > 0 && (
+              <div className="px-5 py-4">
+                <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2.5">
+                  Docs da Empresa ({empresaDocs.length})
+                </p>
+                <div className="space-y-1">
+                  {empresaDocs.slice(0, 10).map((doc: any) => (
+                    <div
+                      key={doc.id}
+                      onClick={() => doc.arquivo_url ? window.open(doc.arquivo_url, '_blank') : navigate('/documentos')}
+                      className="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                    >
+                      <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                        <FileText className="w-4 h-4 text-blue-500" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[11px] text-[#0F172A] truncate font-medium">
-                          {msg.body || `[${msg.message_type}]`}
-                        </p>
-                        <p className="text-[10px] text-gray-400">
-                          {msg.from_me ? 'Enviado' : 'Recebido'} · {msg.timestamp ? new Date(msg.timestamp).toLocaleDateString('pt-BR') : ''}
-                        </p>
+                        <p className="text-[12px] text-[#0F172A] truncate font-medium">{doc.codigo} — {doc.titulo}</p>
+                        <p className="text-[10px] text-gray-400">{doc.tipo} · {doc.status}</p>
                       </div>
+                      <Download className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
             )}
-          </div>
-
-          {/* Docs da empresa */}
-          {empresaDocs.length > 0 && (
-            <div className="px-4 py-3 border-t border-gray-100">
-              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2">
-                Docs da Empresa ({empresaDocs.length})
-              </p>
-              <div className="space-y-1.5">
-                {empresaDocs.slice(0, 10).map((doc: any) => (
-                  <button
-                    key={doc.id}
-                    onClick={() => navigate('/documentos')}
-                    className="w-full flex items-center gap-2.5 p-2 rounded-md hover:bg-gray-50 transition-colors text-left cursor-pointer"
-                  >
-                    <div className="w-8 h-8 rounded bg-blue-50 flex items-center justify-center flex-shrink-0">
-                      <FileText className="w-3.5 h-3.5 text-blue-500" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] text-[#0F172A] truncate font-medium">{doc.codigo} — {doc.titulo}</p>
-                      <p className="text-[10px] text-gray-400">{doc.tipo} · {doc.status}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </aside>
-      )}
+          </aside>
+        );
+      })()}
     </div>
   );
 }
