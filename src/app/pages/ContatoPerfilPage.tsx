@@ -96,65 +96,94 @@ function PersonAvatar({ name, phone }: { name: string; phone?: string }) {
 
 /* ── Main Page ── */
 export default function ContatoPerfilPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id, phone: phoneParam } = useParams<{ id?: string; phone?: string }>();
   const navigate = useNavigate();
 
+  // Chat name passed via URL search params (from ChatPage)
+  const chatName = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("name") || null;
+  }, []);
+
   const [contato, setContato] = useState<ContatoRow | null>(null);
+  const [displayName, setDisplayName] = useState<string>("");
+  const [displayPhone, setDisplayPhone] = useState<string>("");
   const [empresa, setEmpresa] = useState<EmpresaBasic | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabKey>("arquivos");
   const [search, setSearch] = useState("");
 
-  // WhatsApp messages (files sent by this contact)
   const [whatsappFiles, setWhatsappFiles] = useState<WhatsAppMsg[]>([]);
   const [allMessages, setAllMessages] = useState<WhatsAppMsg[]>([]);
-  // Documents from the empresa
   const [empresaDocs, setEmpresaDocs] = useState<DocumentRow[]>([]);
 
-  // Fetch contato + empresa + messages
   useEffect(() => {
-    if (!id) return;
     setLoading(true);
 
     (async () => {
-      // Fetch contato
-      const { data: contatoData } = await supabase
-        .from("contatos")
-        .select("*")
-        .eq("id", id)
-        .single();
+      let phoneDigits = "";
+      let contatoRow: ContatoRow | null = null;
 
-      if (!contatoData) {
-        setLoading(false);
-        return;
+      if (id) {
+        // Route: /contatos/:id — fetch by contato ID
+        const { data } = await supabase.from("contatos").select("*").eq("id", id).single();
+        contatoRow = data as ContatoRow | null;
+        if (contatoRow) {
+          phoneDigits = (contatoRow.whatsapp || contatoRow.telefone || "").replace(/\D/g, "");
+          setDisplayName(contatoRow.nome);
+          setDisplayPhone(phoneDigits);
+        }
+      } else if (phoneParam) {
+        // Route: /perfil/:phone — lookup by phone number
+        phoneDigits = phoneParam.replace(/\D/g, "");
+        setDisplayPhone(phoneDigits);
+        setDisplayName(chatName || phoneDigits);
+
+        // Try to find a matching contato
+        const variants = [phoneDigits];
+        if (phoneDigits.startsWith("55") && phoneDigits.length >= 12) variants.push(phoneDigits.slice(2));
+        if (!phoneDigits.startsWith("55") && phoneDigits.length >= 10) variants.push("55" + phoneDigits);
+
+        const { data } = await supabase.from("contatos").select("*").in("whatsapp", variants).limit(1);
+        contatoRow = (data?.[0] as ContatoRow) ?? null;
+
+        // If no contato found, try to get name from whatsapp_messages
+        if (!contatoRow && !chatName) {
+          const { data: msgs } = await supabase
+            .from("whatsapp_messages")
+            .select("sender_name, chat_name")
+            .in("phone", variants)
+            .eq("from_me", false)
+            .limit(1);
+          const senderName = msgs?.[0]?.sender_name || msgs?.[0]?.chat_name;
+          if (senderName) setDisplayName(senderName);
+        }
       }
-      setContato(contatoData as ContatoRow);
 
-      // Fetch empresa
-      if (contatoData.empresa_id) {
+      setContato(contatoRow);
+
+      // Fetch empresa if contato is linked
+      if (contatoRow?.empresa_id) {
         const { data: empData } = await supabase
           .from("clientes")
           .select("id, nome_fantasia, razao_social, cnpj, segmento, status, logo_url")
-          .eq("id", contatoData.empresa_id)
+          .eq("id", contatoRow.empresa_id)
           .single();
         setEmpresa(empData as EmpresaBasic | null);
 
-        // Fetch documents from empresa
         const { data: docs } = await supabase
           .from("documents")
           .select("id, codigo, titulo, tipo, status, created_at")
-          .eq("cliente_id", contatoData.empresa_id)
+          .eq("cliente_id", contatoRow.empresa_id)
           .order("created_at", { ascending: false });
         setEmpresaDocs((docs as DocumentRow[]) || []);
       }
 
-      // Fetch WhatsApp messages by phone
-      const phone = contatoData.whatsapp || contatoData.telefone;
-      if (phone) {
-        const digits = phone.replace(/\D/g, "");
-        const variants = [digits];
-        if (digits.startsWith("55") && digits.length >= 12) variants.push(digits.slice(2));
-        if (!digits.startsWith("55") && digits.length >= 10) variants.push("55" + digits);
+      // Fetch WhatsApp messages
+      if (phoneDigits) {
+        const variants = [phoneDigits];
+        if (phoneDigits.startsWith("55") && phoneDigits.length >= 12) variants.push(phoneDigits.slice(2));
+        if (!phoneDigits.startsWith("55") && phoneDigits.length >= 10) variants.push("55" + phoneDigits);
 
         const { data: msgs } = await supabase
           .from("whatsapp_messages")
@@ -165,17 +194,12 @@ export default function ContatoPerfilPage() {
 
         const allMsgs = (msgs as WhatsAppMsg[]) || [];
         setAllMessages(allMsgs);
-
-        // Filter to only files (not text messages)
-        const files = allMsgs.filter((m) =>
-          ["image", "document", "video", "audio"].includes(m.message_type)
-        );
-        setWhatsappFiles(files);
+        setWhatsappFiles(allMsgs.filter((m) => ["image", "document", "video", "audio"].includes(m.message_type)));
       }
 
       setLoading(false);
     })();
-  }, [id]);
+  }, [id, phoneParam]);
 
   // Filtered content based on search
   const filteredFiles = useMemo(() => {
@@ -210,7 +234,7 @@ export default function ContatoPerfilPage() {
     );
   }
 
-  if (!contato) {
+  if (!displayName && !contato) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3">
         <p className="text-certifica-500 text-sm">Contato não encontrado</p>
@@ -218,6 +242,8 @@ export default function ContatoPerfilPage() {
       </div>
     );
   }
+
+  const profileName = contato?.nome || displayName || displayPhone;
 
   return (
     <div className="h-full overflow-y-auto">
@@ -236,21 +262,21 @@ export default function ContatoPerfilPage() {
         {/* ── Profile Header ── */}
         <div className="bg-white border border-certifica-200 rounded-lg p-6 mb-5">
           <div className="flex flex-col sm:flex-row gap-5">
-            <PersonAvatar name={contato.nome} phone={contato.whatsapp || contato.telefone} />
+            <PersonAvatar name={profileName} phone={displayPhone || contato?.whatsapp || contato?.telefone} />
 
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 <h1 className="text-[22px] text-certifica-dark leading-tight" style={{ fontWeight: 600 }}>
-                  {contato.nome}
+                  {profileName}
                 </h1>
-                {contato.principal && (
+                {contato?.principal && (
                   <span className="text-[9px] bg-certifica-accent/10 text-certifica-accent px-2 py-0.5 rounded" style={{ fontWeight: 600 }}>
                     PRINCIPAL
                   </span>
                 )}
               </div>
 
-              {contato.cargo && (
+              {contato?.cargo && (
                 <p className="text-[13px] text-certifica-500 flex items-center gap-1.5 mb-2">
                   <Briefcase className="w-3.5 h-3.5" strokeWidth={1.5} />
                   {contato.cargo}
@@ -259,19 +285,19 @@ export default function ContatoPerfilPage() {
 
               {/* Contact info */}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-certifica-500 mb-3">
-                {contato.email && (
+                {contato?.email && (
                   <a href={`mailto:${contato.email}`} className="flex items-center gap-1 hover:text-certifica-accent transition-colors">
                     <Mail className="w-3.5 h-3.5" strokeWidth={1.5} />
                     {contato.email}
                   </a>
                 )}
-                {contato.telefone && (
+                {(contato?.telefone || displayPhone) && (
                   <span className="flex items-center gap-1">
                     <Phone className="w-3.5 h-3.5" strokeWidth={1.5} />
-                    {contato.telefone}
+                    {contato?.telefone || displayPhone}
                   </span>
                 )}
-                {contato.whatsapp && (
+                {displayPhone && (
                   <button
                     onClick={() => navigate("/chat")}
                     className="flex items-center gap-1 text-certifica-accent hover:underline cursor-pointer"
@@ -280,10 +306,12 @@ export default function ContatoPerfilPage() {
                     WhatsApp
                   </button>
                 )}
-                <span className="flex items-center gap-1 text-certifica-400">
-                  <Calendar className="w-3.5 h-3.5" strokeWidth={1.5} />
-                  Desde {new Date(contato.created_at).toLocaleDateString("pt-BR", { month: "short", year: "numeric" })}
-                </span>
+                {contato?.created_at && (
+                  <span className="flex items-center gap-1 text-certifica-400">
+                    <Calendar className="w-3.5 h-3.5" strokeWidth={1.5} />
+                    Desde {new Date(contato.created_at).toLocaleDateString("pt-BR", { month: "short", year: "numeric" })}
+                  </span>
+                )}
               </div>
 
               {/* Empresa link */}
@@ -312,21 +340,21 @@ export default function ContatoPerfilPage() {
 
             {/* Quick Actions */}
             <div className="flex sm:flex-col gap-2 flex-shrink-0">
-              {contato.telefone && (
-                <a href={`tel:${contato.telefone}`}>
+              {(contato?.telefone || displayPhone) && (
+                <a href={`tel:${contato?.telefone || displayPhone}`}>
                   <DSButton variant="outline" size="sm" icon={<Phone className="w-3.5 h-3.5" strokeWidth={1.5} />}>
                     Ligar
                   </DSButton>
                 </a>
               )}
-              {contato.email && (
+              {contato?.email && (
                 <a href={`mailto:${contato.email}`}>
                   <DSButton variant="outline" size="sm" icon={<Mail className="w-3.5 h-3.5" strokeWidth={1.5} />}>
                     Email
                   </DSButton>
                 </a>
               )}
-              {contato.whatsapp && (
+              {displayPhone && (
                 <DSButton variant="outline" size="sm" icon={<MessageSquare className="w-3.5 h-3.5" strokeWidth={1.5} />} onClick={() => navigate("/chat")}>
                   Chat
                 </DSButton>
@@ -449,7 +477,7 @@ export default function ContatoPerfilPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
                             <span className="text-[11px] text-certifica-dark" style={{ fontWeight: 600 }}>
-                              {msg.from_me ? "Você" : contato.nome}
+                              {msg.from_me ? "Você" : profileName}
                             </span>
                             <span className="text-[9px] text-certifica-400">
                               {msg.timestamp ? new Date(msg.timestamp).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""}

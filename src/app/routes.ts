@@ -38,6 +38,7 @@ export const router = createBrowserRouter([
       { path: "clientes", Component: ClientesPage },
       { path: "clientes/:id", Component: ClientePerfilPage },
       { path: "contatos/:id", Component: ContatoPerfilPage },
+      { path: "perfil/:phone", Component: ContatoPerfilPage },
       { path: "projetos", Component: ProjetosPage },
       { path: "projetos/pipeline", Component: PipelinePage },
       { path: "documentos", Component: DocumentosPage },
