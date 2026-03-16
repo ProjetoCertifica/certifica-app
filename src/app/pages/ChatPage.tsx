@@ -123,6 +123,79 @@ const EMOJI_CATEGORIES: { label: string; emojis: string[] }[] = [
 
 /* ── component ───────────────────────────────────── */
 
+/* ── Editable contact info sub-component (needs own hooks) ── */
+function ProfileContactInfo({ phone, formatPhoneFn }: { phone: string; formatPhoneFn: (p?: string) => string }) {
+  const emailKey = `certifica-contact-email-${phone}`;
+  const notesKey = `certifica-contact-notes-${phone}`;
+  const [savedEmail, setSavedEmail] = useState(() => localStorage.getItem(emailKey) || '');
+  const [savedNotes, setSavedNotes] = useState(() => localStorage.getItem(notesKey) || '');
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [tempEmail, setTempEmail] = useState(savedEmail);
+  const [tempNotes, setTempNotes] = useState(savedNotes);
+
+  const saveEmail = () => { localStorage.setItem(emailKey, tempEmail); setSavedEmail(tempEmail); setEditingEmail(false); };
+  const saveNotes = () => { localStorage.setItem(notesKey, tempNotes); setSavedNotes(tempNotes); setEditingNotes(false); };
+
+  return (
+    <div className="px-5 py-4 border-b border-gray-100">
+      <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2.5">Informações</p>
+      <div className="space-y-2.5">
+        <div className="flex items-center gap-2.5 text-[12px]">
+          <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+          <span className="text-[#0F172A]">{formatPhoneFn(phone)}</span>
+        </div>
+        <div className="flex items-center gap-2.5 text-[12px]">
+          <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
+          {editingEmail ? (
+            <div className="flex items-center gap-1 flex-1">
+              <input type="email" value={tempEmail} onChange={e => setTempEmail(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && saveEmail()} placeholder="email@exemplo.com"
+                className="flex-1 text-[12px] px-2 py-1 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#2B8EAD]" autoFocus />
+              <button onClick={saveEmail} className="text-[#2B8EAD] text-[11px] font-medium hover:underline">Salvar</button>
+              <button onClick={() => { setTempEmail(savedEmail); setEditingEmail(false); }} className="text-gray-400 text-[11px] hover:underline">X</button>
+            </div>
+          ) : savedEmail ? (
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              <a href={`mailto:${savedEmail}`} className="text-[#2B8EAD] hover:underline truncate">{savedEmail}</a>
+              <button onClick={() => { setTempEmail(savedEmail); setEditingEmail(true); }} className="text-gray-300 hover:text-gray-500 flex-shrink-0">
+                <Info className="w-3 h-3" />
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setEditingEmail(true)} className="text-gray-400 hover:text-[#2B8EAD] transition-colors">
+              Adicionar email...
+            </button>
+          )}
+        </div>
+        <div className="flex items-start gap-2.5 text-[12px]">
+          <FileText className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+          {editingNotes ? (
+            <div className="flex-1">
+              <textarea value={tempNotes} onChange={e => setTempNotes(e.target.value)} placeholder="Observações sobre o contato..."
+                className="w-full text-[12px] px-2 py-1.5 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#2B8EAD] resize-none" rows={3} autoFocus />
+              <div className="flex gap-1 mt-1">
+                <button onClick={saveNotes} className="text-[#2B8EAD] text-[11px] font-medium hover:underline">Salvar</button>
+                <button onClick={() => { setTempNotes(savedNotes); setEditingNotes(false); }} className="text-gray-400 text-[11px] hover:underline">Cancelar</button>
+              </div>
+            </div>
+          ) : savedNotes ? (
+            <div className="flex-1 min-w-0">
+              <p className="text-gray-600 whitespace-pre-wrap text-[11px] cursor-pointer hover:bg-gray-50 rounded p-1 -m-1" onClick={() => { setTempNotes(savedNotes); setEditingNotes(true); }}>
+                {savedNotes}
+              </p>
+            </div>
+          ) : (
+            <button onClick={() => setEditingNotes(true)} className="text-gray-400 hover:text-[#2B8EAD] transition-colors">
+              Adicionar observações...
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ChatPage() {
   const navigate = useNavigate();
   const [status, setStatus] = useState<ZApiStatus | null>(null);
@@ -1612,94 +1685,7 @@ export default function ChatPage() {
             )}
 
             {/* Contact details */}
-            {(() => {
-              const emailKey = `certifica-contact-email-${toDigits(profilePhone)}`;
-              const notesKey = `certifica-contact-notes-${toDigits(profilePhone)}`;
-              const [savedEmail, setSavedEmail] = React.useState(() => localStorage.getItem(emailKey) || '');
-              const [savedNotes, setSavedNotes] = React.useState(() => localStorage.getItem(notesKey) || '');
-              const [editingEmail, setEditingEmail] = React.useState(false);
-              const [editingNotes, setEditingNotes] = React.useState(false);
-              const [tempEmail, setTempEmail] = React.useState(savedEmail);
-              const [tempNotes, setTempNotes] = React.useState(savedNotes);
-
-              const saveEmail = () => { localStorage.setItem(emailKey, tempEmail); setSavedEmail(tempEmail); setEditingEmail(false); };
-              const saveNotes = () => { localStorage.setItem(notesKey, tempNotes); setSavedNotes(tempNotes); setEditingNotes(false); };
-
-              return (
-                <div className="px-5 py-4 border-b border-gray-100">
-                  <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2.5">Informações</p>
-                  <div className="space-y-2.5">
-                    {/* Telefone */}
-                    <div className="flex items-center gap-2.5 text-[12px]">
-                      <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                      <span className="text-[#0F172A]">{formatPhone(toDigits(profilePhone))}</span>
-                    </div>
-
-                    {/* Email editável */}
-                    <div className="flex items-center gap-2.5 text-[12px]">
-                      <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                      {editingEmail ? (
-                        <div className="flex items-center gap-1 flex-1">
-                          <input
-                            type="email"
-                            value={tempEmail}
-                            onChange={e => setTempEmail(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && saveEmail()}
-                            placeholder="email@exemplo.com"
-                            className="flex-1 text-[12px] px-2 py-1 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#2B8EAD]"
-                            autoFocus
-                          />
-                          <button onClick={saveEmail} className="text-[#2B8EAD] text-[11px] font-medium hover:underline">Salvar</button>
-                          <button onClick={() => { setTempEmail(savedEmail); setEditingEmail(false); }} className="text-gray-400 text-[11px] hover:underline">X</button>
-                        </div>
-                      ) : savedEmail ? (
-                        <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                          <a href={`mailto:${savedEmail}`} className="text-[#2B8EAD] hover:underline truncate">{savedEmail}</a>
-                          <button onClick={() => { setTempEmail(savedEmail); setEditingEmail(true); }} className="text-gray-300 hover:text-gray-500 flex-shrink-0">
-                            <Info className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ) : (
-                        <button onClick={() => setEditingEmail(true)} className="text-gray-400 hover:text-[#2B8EAD] transition-colors">
-                          Adicionar email...
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Observações editáveis */}
-                    <div className="flex items-start gap-2.5 text-[12px]">
-                      <FileText className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                      {editingNotes ? (
-                        <div className="flex-1">
-                          <textarea
-                            value={tempNotes}
-                            onChange={e => setTempNotes(e.target.value)}
-                            placeholder="Observações sobre o contato..."
-                            className="w-full text-[12px] px-2 py-1.5 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#2B8EAD] resize-none"
-                            rows={3}
-                            autoFocus
-                          />
-                          <div className="flex gap-1 mt-1">
-                            <button onClick={saveNotes} className="text-[#2B8EAD] text-[11px] font-medium hover:underline">Salvar</button>
-                            <button onClick={() => { setTempNotes(savedNotes); setEditingNotes(false); }} className="text-gray-400 text-[11px] hover:underline">Cancelar</button>
-                          </div>
-                        </div>
-                      ) : savedNotes ? (
-                        <div className="flex-1 min-w-0">
-                          <p className="text-gray-600 whitespace-pre-wrap text-[11px] cursor-pointer hover:bg-gray-50 rounded p-1 -m-1" onClick={() => { setTempNotes(savedNotes); setEditingNotes(true); }}>
-                            {savedNotes}
-                          </p>
-                        </div>
-                      ) : (
-                        <button onClick={() => setEditingNotes(true)} className="text-gray-400 hover:text-[#2B8EAD] transition-colors">
-                          Adicionar observações...
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
+            <ProfileContactInfo phone={toDigits(profilePhone)} formatPhoneFn={formatPhone} />
 
             {/* Arquivos RECEBIDOS */}
             <div className="px-5 py-4 border-b border-gray-100">
