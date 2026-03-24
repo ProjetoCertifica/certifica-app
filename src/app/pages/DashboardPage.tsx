@@ -24,6 +24,7 @@ import { useDashboard, type DashboardFilters, type DashboardProject } from "../l
 import { useProjetos } from "../lib/useProjetos";
 import { useClientes } from "../lib/useClientes";
 import { APIFallback } from "../components/ErrorBoundary";
+import { gptComplete } from "../lib/openai";
 
 type StatusVariant = "conformidade" | "nao-conformidade" | "observacao" | "oportunidade" | "outline";
 type LayerMode = "operacional" | "executiva";
@@ -258,56 +259,87 @@ export default function DashboardPage() {
 
   const drillTitle = kpiList.find((k) => k.key === selectedKpi)?.label ?? "";
 
-  /* ── Recomendações do dia (lógica condicional) ── */
-  const aiRecommendations = React.useMemo(() => {
-    const recs: string[] = [];
+  /* ── Recomendações do dia (OpenAI) ── */
+  const [aiRecommendations, setAiRecommendations] = React.useState<string[]>([]);
+  const [aiLoading, setAiLoading] = React.useState(false);
+  const aiCalledRef = React.useRef(false);
+
+  // Build snapshot dos dados pra enviar ao GPT
+  const aiSnapshot = React.useMemo(() => {
     const p = dashboard.projects;
     const k = dashboard.kpis;
+    const now = new Date();
 
-    // 1. Projetos com prazo vencido
     const vencidos = p.filter((proj) => riskScore(proj) >= 100);
-    if (vencidos.length > 0) {
-      recs.push(`${vencidos.length} projeto${vencidos.length > 1 ? "s" : ""} com prazo vencido — iniciar tratativa urgente com ${vencidos[0].cliente_nome}.`);
-    }
-
-    // 2. Projetos em zona de risco (prazo < 15 dias)
-    const highRisk = p.filter((proj) => riskScore(proj) === 70);
-    if (highRisk.length > 0 && recs.length < 3) {
-      const dias = Math.ceil((new Date(highRisk[0].previsao!).getTime() - Date.now()) / 86400_000);
-      recs.push(`${highRisk[0].cliente_nome} com entrega em ${dias} dia${dias !== 1 ? "s" : ""} — revisar cronograma e pendências.`);
-    }
-
-    // 3. Atrasos detectados
-    if (k.atrasos > 0 && recs.length < 3) {
-      recs.push(`${k.atrasos} projeto${k.atrasos > 1 ? "s" : ""} em atraso detectado${k.atrasos > 1 ? "s" : ""} — renegociar prazo ou realocar consultores.`);
-    }
-
-    // 4. Muitas propostas sem conversão
+    const emRisco = p.filter((proj) => riskScore(proj) === 70);
     const propostas = p.filter((proj) => proj.status === "proposta");
-    if (propostas.length >= 3 && recs.length < 3) {
-      recs.push(`${propostas.length} propostas abertas sem conversão — fazer follow-up com os clientes.`);
-    }
 
-    // 5. Treinamentos pendentes
-    if (k.treinamentos > 0 && recs.length < 3) {
-      recs.push(`${k.treinamentos} treinamento${k.treinamentos > 1 ? "s" : ""} registrado${k.treinamentos > 1 ? "s" : ""} — verificar cronograma e inscrições.`);
-    }
+    const projetosResumo = p.slice(0, 15).map((proj) => {
+      const dias = proj.previsao ? Math.ceil((new Date(proj.previsao).getTime() - now.getTime()) / 86400_000) : null;
+      return `${proj.codigo} | ${proj.cliente_nome} | ${proj.norma} | ${proj.status} | consultor: ${proj.consultor} | ${dias !== null ? (dias < 0 ? `${Math.abs(dias)}d atrasado` : `${dias}d restantes`) : "sem prazo"}`;
+    }).join("\n");
 
-    // 6. Parabéns se tudo bem
-    if (recs.length === 0) {
-      recs.push("Nenhuma ação crítica identificada. Bom momento para antecipar auditorias do próximo ciclo.");
-    }
+    return {
+      kpis: k,
+      vencidos: vencidos.length,
+      emRisco: emRisco.length,
+      propostas: propostas.length,
+      totalProjetos: p.length,
+      auditorias: dashboard.audits.length,
+      treinamentos: dashboard.trainings.length,
+      projetosResumo,
+    };
+  }, [dashboard.projects, dashboard.kpis, dashboard.audits, dashboard.trainings]);
 
-    // Completar até 3 com contexto geral
-    if (recs.length < 3 && k.auditorias < p.filter((proj) => proj.status === "em-andamento").length) {
-      recs.push("Projetos ativos sem auditoria registrada — agendar rodada de verificação interna.");
-    }
-    if (recs.length < 3) {
-      recs.push(`Carteira com ${k.ativos} projeto${k.ativos !== 1 ? "s" : ""} ativo${k.ativos !== 1 ? "s" : ""} — revisar cronogramas para as próximas 4 semanas.`);
-    }
+  React.useEffect(() => {
+    if (dashboard.loading || aiCalledRef.current || dashboard.projects.length === 0) return;
+    aiCalledRef.current = true;
+    setAiLoading(true);
 
-    return recs.slice(0, 3);
-  }, [dashboard.projects, dashboard.kpis]);
+    const prompt = `Você é um consultor sênior de gestão ISO/compliance analisando o painel de uma consultoria brasileira.
+
+DADOS ATUAIS:
+- Projetos ativos: ${aiSnapshot.kpis.ativos}
+- Atrasos: ${aiSnapshot.kpis.atrasos}
+- Auditorias: ${aiSnapshot.kpis.auditorias}
+- Consultorias em andamento: ${aiSnapshot.kpis.consultorias}
+- Treinamentos: ${aiSnapshot.kpis.treinamentos}
+- Risco médio: ${aiSnapshot.kpis.risco}/100
+- Projetos vencidos: ${aiSnapshot.vencidos}
+- Projetos em risco (<15 dias): ${aiSnapshot.emRisco}
+- Propostas sem conversão: ${aiSnapshot.propostas}
+
+DETALHAMENTO DOS PROJETOS:
+${aiSnapshot.projetosResumo}
+
+Gere EXATAMENTE 3 recomendações estratégicas e acionáveis para o gestor da consultoria. Cada recomendação deve:
+- Ser específica (mencionar cliente, consultor ou projeto quando relevante)
+- Ter uma ação clara
+- Ser curta (1-2 frases)
+
+Responda APENAS com as 3 recomendações, uma por linha, sem numeração ou bullet points.`;
+
+    gptComplete(
+      [{ role: "system", content: "Você é um assistente de gestão de consultoria ISO. Responda sempre em português brasileiro, de forma direta e profissional." }, { role: "user", content: prompt }],
+      "gpt-4o-mini",
+      300,
+    )
+      .then((response) => {
+        const lines = response.split("\n").map((l) => l.replace(/^[\d\-\.\)\*]+\s*/, "").trim()).filter((l) => l.length > 10);
+        setAiRecommendations(lines.slice(0, 3));
+      })
+      .catch(() => {
+        // Fallback estático se OpenAI falhar
+        const k = aiSnapshot.kpis;
+        const fallback: string[] = [];
+        if (k.atrasos > 0) fallback.push(`${k.atrasos} projeto(s) em atraso — renegociar prazos ou realocar consultores.`);
+        if (k.risco > 50) fallback.push(`Risco médio da carteira em ${k.risco}/100 — revisar cronogramas urgentes.`);
+        if (fallback.length === 0) fallback.push("Carteira sob controle. Bom momento para antecipar auditorias do próximo ciclo.");
+        while (fallback.length < 3) fallback.push(`${k.ativos} projetos ativos — manter acompanhamento semanal com consultores.`);
+        setAiRecommendations(fallback.slice(0, 3));
+      })
+      .finally(() => setAiLoading(false));
+  }, [dashboard.loading, dashboard.projects.length, aiSnapshot]);
 
   /* ── Alerts ── */
   const alerts = React.useMemo(() => {
@@ -485,13 +517,27 @@ export default function DashboardPage() {
               <Brain className="w-3.5 h-3.5 text-certifica-accent" strokeWidth={1.5} />
             </div>
             <span className="text-[12px] text-white/90" style={{ fontWeight: 600 }}>Recomendações do dia</span>
+            <span className="text-[9px] text-white/30 ml-1">powered by IA</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {aiRecommendations.map((rec, i) => (
-              <div key={i} className="text-[11px] text-white/80 bg-white/[0.06] border border-white/[0.08] rounded-[4px] px-3 py-2.5" style={{ lineHeight: "1.5" }}>
-                {rec}
+            {aiLoading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="bg-white/[0.06] border border-white/[0.08] rounded-[4px] px-3 py-2.5 flex items-center gap-2">
+                  <RefreshCw className="w-3 h-3 text-white/30 animate-spin" strokeWidth={1.5} />
+                  <span className="text-[11px] text-white/30">Analisando dados...</span>
+                </div>
+              ))
+            ) : aiRecommendations.length > 0 ? (
+              aiRecommendations.map((rec, i) => (
+                <div key={i} className="text-[11px] text-white/80 bg-white/[0.06] border border-white/[0.08] rounded-[4px] px-3 py-2.5" style={{ lineHeight: "1.5" }}>
+                  {rec}
+                </div>
+              ))
+            ) : (
+              <div className="text-[11px] text-white/40 bg-white/[0.06] border border-white/[0.08] rounded-[4px] px-3 py-2.5 col-span-3">
+                Carregando recomendações...
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>
