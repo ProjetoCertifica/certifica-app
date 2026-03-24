@@ -517,7 +517,6 @@ Responda APENAS com as 3 recomendações, uma por linha, sem numeração ou bull
               <Brain className="w-3.5 h-3.5 text-certifica-accent" strokeWidth={1.5} />
             </div>
             <span className="text-[12px] text-white/90" style={{ fontWeight: 600 }}>Recomendações do dia</span>
-            <span className="text-[9px] text-white/30 ml-1">powered by IA</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {aiLoading ? (
