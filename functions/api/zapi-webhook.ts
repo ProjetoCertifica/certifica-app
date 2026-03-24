@@ -170,11 +170,24 @@ async function isAgentPaused(
 
 function isWithinBusinessHours(settings: any): boolean {
   if (!settings?.business_hours_only) return true;
+  // Horário de Brasília (America/Sao_Paulo)
   const now = new Date();
-  const day = now.getDay();
+  const brParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    weekday: "short",
+  }).formatToParts(now);
+  const hour = brParts.find((p) => p.type === "hour")?.value ?? "00";
+  const minute = brParts.find((p) => p.type === "minute")?.value ?? "00";
+  const weekday = brParts.find((p) => p.type === "weekday")?.value ?? "";
+  const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const day = dayMap[weekday] ?? now.getDay();
+
   if (settings.business_days?.length && !settings.business_days.includes(day))
     return false;
-  const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  const hhmm = `${hour}:${minute}`;
   if (settings.business_hours_start && hhmm < settings.business_hours_start)
     return false;
   if (settings.business_hours_end && hhmm > settings.business_hours_end)

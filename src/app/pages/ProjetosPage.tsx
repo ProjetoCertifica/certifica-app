@@ -268,7 +268,7 @@ export default function ProjetosPage() {
                   Projetos
                 </h2>
                 <p className="text-[11px] text-certifica-500 mt-0.5" style={{ fontWeight: 400 }}>
-                  {projetosList.length} projetos &middot; {totalAtivos} em andamento
+                  {projetosList.length} {projetosList.length === 1 ? "projeto" : "projetos"} &middot; {totalAtivos} em andamento
                   {totalPropostas > 0 && (
                     <span className="text-oportunidade ml-1" style={{ fontWeight: 500 }}>
                       &middot; {totalPropostas} proposta{totalPropostas > 1 ? "s" : ""}
@@ -353,8 +353,8 @@ export default function ProjetosPage() {
               <option value="todos">Todas as fases</option>
               <option value="0">Proposta</option>
               <option value="1">1 — Planejamento</option>
-              <option value="2">2 — Solucao</option>
-              <option value="3">3 — Verificacao</option>
+              <option value="2">2 — Solução</option>
+              <option value="3">3 — Verificação</option>
               <option value="4">4 — Acompanhamento</option>
             </select>
             <select
@@ -511,7 +511,7 @@ export default function ProjetosPage() {
                 {(
                   [
                     { key: "info" as const, label: "Detalhes" },
-                    { key: "entregaveis" as const, label: "Entregaveis" },
+                    { key: "entregaveis" as const, label: "Entregáveis" },
                     { key: "proposta" as const, label: "Proposta" },
                   ] as const
                 ).map((tab) => (
@@ -622,8 +622,8 @@ function DetailInfo({
             { label: "Norma", value: p.norma },
             { label: "Fase", value: `${p.fase > 0 ? p.fase + " — " : ""}${p.faseLabel}` },
             { label: "Consultor", value: p.consultor },
-            { label: "Inicio", value: p.inicio },
-            { label: "Previsao", value: p.previsao },
+            { label: "Início", value: p.inicio },
+            { label: "Previsão", value: p.previsao },
           ].map((item) => (
             <div key={item.label} className="flex items-center justify-between">
               <span className="text-[11px] text-certifica-500" style={{ fontWeight: 400 }}>
@@ -759,7 +759,7 @@ function DetailInfo({
             className="text-[10px] tracking-[0.06em] uppercase text-certifica-500 mb-2"
             style={{ fontWeight: 600 }}
           >
-            Observacoes
+            Observações
           </div>
           <p className="text-[11.5px] text-certifica-dark" style={{ fontWeight: 400, lineHeight: "1.55" }}>
             {p.observacoes}
@@ -1141,7 +1141,7 @@ function NewProjectModal({
     setEquipeSelecionada((prev) => (prev.includes(nome) ? prev.filter((n) => n !== nome) : [...prev, nome]));
   };
 
-  const stepLabels = ["Identificacao", "Proposta", "Cronograma"];
+  const stepLabels = ["Identificação", "Proposta", "Cronograma"];
 
   const canGoNextFromStep1 = clienteId.trim() !== "" && titulo.trim() !== "" && norma.trim() !== "" && descricao.trim() !== "";
   const canGoNextFromStep2 = valor.trim() !== "" && condicoes.trim() !== "" && entregaveis.filter((e) => e.trim()).length > 0;
@@ -1342,7 +1342,7 @@ function NewProjectModal({
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-[10px] tracking-[0.06em] uppercase text-certifica-500" style={{ fontWeight: 600 }}>
-                    Entregaveis
+                    Entregáveis
                   </div>
                   <button onClick={addEntregavelItem} className="flex items-center gap-1 text-[11px] text-certifica-accent cursor-pointer hover:underline" style={{ fontWeight: 500 }}>
                     <Plus className="w-3 h-3" strokeWidth={1.5} />
@@ -1358,7 +1358,7 @@ function NewProjectModal({
                       <input
                         value={ent}
                         onChange={(e) => updateEntregavelItem(idx, e.target.value)}
-                        placeholder="Descreva o entregavel..."
+                        placeholder="Descreva o entregável..."
                         className="flex-1 h-8 px-3 bg-white border border-certifica-200 rounded-[3px] text-[12px] text-certifica-dark placeholder:text-certifica-500/40 focus:outline-none focus:ring-1 focus:ring-certifica-700/30"
                         style={{ fontWeight: 400 }}
                       />
@@ -1376,7 +1376,7 @@ function NewProjectModal({
                 </div>
               </div>
               <div className="border-t border-certifica-200" />
-              <DSTextarea label="Observacoes" placeholder="Condicoes especiais, restricoes..." value={observacoes} onChange={(e) => setObservacoes(e.target.value)} />
+              <DSTextarea label="Observações" placeholder="Condições especiais, restrições..." value={observacoes} onChange={(e) => setObservacoes(e.target.value)} />
             </div>
           )}
 
@@ -1387,8 +1387,8 @@ function NewProjectModal({
                   Cronograma
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <DSInput label="Inicio previsto" type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} />
-                  <DSInput label="Conclusao prevista" type="date" value={previsao} onChange={(e) => setPrevisao(e.target.value)} />
+                  <DSInput label="Início previsto" type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} />
+                  <DSInput label="Conclusão prevista" type="date" value={previsao} onChange={(e) => setPrevisao(e.target.value)} />
                 </div>
               </div>
               <div className="border-t border-certifica-200" />
@@ -1443,7 +1443,7 @@ function NewProjectModal({
                     { label: "Projeto", value: titulo || "—" },
                     { label: "Norma", value: norma || "—" },
                     { label: "Valor", value: valor || "—" },
-                    { label: "Entregaveis", value: `${entregaveis.filter((e) => e.trim()).length} itens` },
+                    { label: "Entregáveis", value: `${entregaveis.filter((e) => e.trim()).length} itens` },
                     { label: "Equipe", value: equipeSelecionada.length > 0 ? equipeSelecionada.join(", ") : "—" },
                   ].map((item) => (
                     <div key={item.label} className="flex items-center justify-between">

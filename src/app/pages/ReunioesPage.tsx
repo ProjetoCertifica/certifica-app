@@ -531,7 +531,7 @@ export default function ReunioesPage() {
                     size="sm"
                     className="h-7 px-2 text-[11px] text-nao-conformidade hover:bg-nao-conformidade/10"
                     onClick={async () => {
-                      if (!confirm("Apagar TODAS as reuniões?")) return;
+                      if (!window.confirm("Tem certeza que deseja apagar todas as reuniões?")) return;
                       for (const m of meetings) await remove(m.id);
                       setSelectedId(null);
                     }}

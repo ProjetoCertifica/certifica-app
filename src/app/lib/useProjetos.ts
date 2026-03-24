@@ -8,6 +8,9 @@ export interface ProjetoWithEntregaveis extends Projeto {
   cliente_cnpj?: string;
 }
 
+const PROJETOS_CHANGED = "certifica:projetos-changed";
+function notifyProjetosChanged() { window.dispatchEvent(new Event(PROJETOS_CHANGED)); }
+
 export function useProjetos() {
   const [projetos, setProjetos] = useState<ProjetoWithEntregaveis[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +45,12 @@ export function useProjetos() {
 
   useEffect(() => { fetch(); }, [fetch]);
 
+  useEffect(() => {
+    const handler = () => { fetch(); };
+    window.addEventListener(PROJETOS_CHANGED, handler);
+    return () => window.removeEventListener(PROJETOS_CHANGED, handler);
+  }, [fetch]);
+
   const create = useCallback(async (input: ProjetoInsert, entregaveis?: string[]) => {
     setError(null);
     const { data, error: err } = await supabase
@@ -62,6 +71,7 @@ export function useProjetos() {
     }
 
     await fetch();
+    notifyProjetosChanged();
     return data as Projeto;
   }, [fetch]);
 
@@ -70,6 +80,7 @@ export function useProjetos() {
     const { error: err } = await supabase.from("projetos").update(patch).eq("id", id);
     if (err) { setError(err.message); return false; }
     setProjetos((prev) => prev.map((p) => p.id === id ? { ...p, ...patch } : p));
+    notifyProjetosChanged();
     return true;
   }, []);
 
@@ -128,6 +139,7 @@ export function useProjetos() {
     const { error: err } = await supabase.from("projetos").delete().eq("id", id);
     if (err) { setError(err.message); return false; }
     await fetch();
+    notifyProjetosChanged();
     return true;
   }, [fetch]);
 

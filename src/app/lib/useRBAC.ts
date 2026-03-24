@@ -25,12 +25,13 @@ const ROUTE_PERMISSIONS: Record<string, string> = {
   "/treinamentos": "treinamentos",
   "/relatorios": "relatorios",
   "/configuracoes": "configuracoes",
+  "/chatbot": "configuracoes",
 };
 
 const STORAGE_KEY = "certifica_user_profile";
 
-// If VITE_SUPABASE_URL is set via env, we require real login; otherwise demo mode
-const IS_REAL_SUPABASE = !!import.meta.env.VITE_SUPABASE_URL;
+// App always uses real Supabase (URL is hardcoded in supabase.ts)
+const IS_REAL_SUPABASE = true;
 
 const DEMO_PROFILE: UserProfile = {
   id: "local",

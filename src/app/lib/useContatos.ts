@@ -6,6 +6,9 @@ export interface ContatoWithEmpresa extends Contato {
   empresa_nome: string;
 }
 
+const CONTATOS_CHANGED = "certifica:contatos-changed";
+function notifyContatosChanged() { window.dispatchEvent(new Event(CONTATOS_CHANGED)); }
+
 export function useContatos(empresaId?: string) {
   const [contatos, setContatos] = useState<ContatoWithEmpresa[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +45,12 @@ export function useContatos(empresaId?: string) {
 
   useEffect(() => { fetch(); }, [fetch]);
 
+  useEffect(() => {
+    const handler = () => { fetch(); };
+    window.addEventListener(CONTATOS_CHANGED, handler);
+    return () => window.removeEventListener(CONTATOS_CHANGED, handler);
+  }, [fetch]);
+
   const create = useCallback(async (input: ContatoInsert) => {
     setError(null);
     const { data, error: err } = await supabase
@@ -51,6 +60,7 @@ export function useContatos(empresaId?: string) {
       .single();
     if (err) { setError(err.message); return null; }
     await fetch();
+    notifyContatosChanged();
     return data as Contato;
   }, [fetch]);
 
@@ -62,6 +72,7 @@ export function useContatos(empresaId?: string) {
       .eq("id", id);
     if (err) { setError(err.message); return false; }
     await fetch();
+    notifyContatosChanged();
     return true;
   }, [fetch]);
 
@@ -73,6 +84,7 @@ export function useContatos(empresaId?: string) {
       .eq("id", id);
     if (err) { setError(err.message); return false; }
     await fetch();
+    notifyContatosChanged();
     return true;
   }, [fetch]);
 

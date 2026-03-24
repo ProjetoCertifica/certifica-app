@@ -15,10 +15,58 @@ import {
   Search, Plus, Eye, Building2, Phone, Mail, MapPin, X, Loader2,
   ChevronRight, FolderOpen, ClipboardCheck, ExternalLink, UserCircle,
   Hash, Calendar, AlertTriangle, RefreshCw, Edit3, Check, Ban, RotateCcw,
-  FileText, Video, Shield, UserPlus, Trash2, MessageSquare,
+  FileText, Video, Shield, UserPlus, Trash2, MessageSquare, Camera,
 } from "lucide-react";
+import { supabase } from "../lib/supabase";
 import { useContatos } from "../lib/useContatos";
 import type { ContatoInsert } from "../lib/database.types";
+
+/* ── Company Avatar with Upload ── */
+function CompanyAvatarSmall({ name, id, logoUrl, onLogoChange }: { name: string; id: string; logoUrl?: string | null; onLogoChange?: (url: string) => void }) {
+  const fileRef = React.useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = React.useState(false);
+  const [localUrl, setLocalUrl] = React.useState(logoUrl);
+  React.useEffect(() => { setLocalUrl(logoUrl); }, [logoUrl]);
+  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
+  const hue = Math.abs(id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)) % 360;
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onLogoChange) return;
+    setUploading(true);
+    try {
+      const path = `logos/${id}`;
+      const { error: uploadErr } = await supabase.storage.from("Certifica Arquivos").upload(path, file, { upsert: true, contentType: file.type });
+      if (uploadErr) throw uploadErr;
+      const { data: urlData } = supabase.storage.from("Certifica Arquivos").getPublicUrl(path);
+      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+      await supabase.from("clientes").update({ logo_url: publicUrl }).eq("id", id);
+      setLocalUrl(publicUrl);
+      onLogoChange(publicUrl);
+    } catch (err) { console.error("Upload error:", err); }
+    finally { setUploading(false); if (fileRef.current) fileRef.current.value = ""; }
+  };
+
+  return (
+    <div className="relative group flex-shrink-0 w-11 h-11">
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+      {localUrl ? (
+        <img src={localUrl} alt={name} className="w-11 h-11 rounded-lg object-cover shadow" />
+      ) : (
+        <div className="w-11 h-11 rounded-lg flex items-center justify-center text-white text-sm shadow"
+          style={{ fontWeight: 700, background: `linear-gradient(135deg, hsl(${hue}, 65%, 50%), hsl(${(hue + 40) % 360}, 55%, 40%))` }}>
+          {initials || "?"}
+        </div>
+      )}
+      {onLogoChange && (
+        <button onClick={() => fileRef.current?.click()} disabled={uploading}
+          className="absolute inset-0 rounded-lg bg-black/0 group-hover:bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
+          {uploading ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Camera className="w-4 h-4 text-white" strokeWidth={1.5} />}
+        </button>
+      )}
+    </div>
+  );
+}
 
 /* ── Types ── */
 interface ClienteUI {
@@ -39,6 +87,7 @@ interface ClienteUI {
   cadastro: string;
   consultorResponsavel: string;
   projetosCount: number;
+  logoUrl: string | null;
 }
 
 const statusMap: Record<string, { label: string; variant: "conformidade" | "nao-conformidade" | "observacao" | "oportunidade" | "outline" }> = {
@@ -66,6 +115,7 @@ function mapToUI(c: ClienteWithProjetos): ClienteUI {
     cadastro: new Date(c.created_at).toLocaleDateString("pt-BR"),
     consultorResponsavel: c.consultor_responsavel,
     projetosCount: c.projetos_count,
+    logoUrl: c.logo_url ?? null,
   };
 }
 
@@ -109,7 +159,10 @@ function computeHealth360(c: ClienteUI, data: Cliente360Data): { score: number; 
   const prjBonus = Math.min(activePrj * 5 + completedPrj * 3, 20);
   if (prjBonus > 0) {
     score += prjBonus;
-    factors.push({ label: `${activePrj} projeto(s) ativo(s)`, impact: "positive", detail: `+${prjBonus} pts` });
+    const prjLabel = activePrj > 0
+      ? `${activePrj} ${activePrj === 1 ? "projeto" : "projetos"} ${activePrj === 1 ? "ativo" : "ativos"}`
+      : `${completedPrj} ${completedPrj === 1 ? "projeto" : "projetos"} ${completedPrj === 1 ? "concluído" : "concluídos"}`;
+    factors.push({ label: prjLabel, impact: "positive", detail: `+${prjBonus} pts` });
   } else if (data.projetos.length === 0) {
     score -= 5;
     factors.push({ label: "Sem projetos", impact: "negative", detail: "-5 pts" });
@@ -123,12 +176,12 @@ function computeHealth360(c: ClienteUI, data: Cliente360Data): { score: number; 
   if (totalFindings > 0) {
     const penalty = Math.min(totalFindings * 4, 20);
     score -= penalty;
-    factors.push({ label: `${totalFindings} não-conformidade(s)`, impact: "negative", detail: `-${penalty} pts` });
+    factors.push({ label: `${totalFindings} ${totalFindings === 1 ? "não-conformidade" : "não-conformidades"}`, impact: "negative", detail: `-${penalty} pts` });
   }
   if (approvedAudits > 0) {
     const bonus = Math.min(approvedAudits * 4, 12);
     score += bonus;
-    factors.push({ label: `${approvedAudits} auditoria(s) aprovada(s)`, impact: "positive", detail: `+${bonus} pts` });
+    factors.push({ label: `${approvedAudits} ${approvedAudits === 1 ? "auditoria aprovada" : "auditorias aprovadas"}`, impact: "positive", detail: `+${bonus} pts` });
   }
 
   // — Documentos obsoletos —
@@ -138,7 +191,7 @@ function computeHealth360(c: ClienteUI, data: Cliente360Data): { score: number; 
   if (obsoleteDocs > 0) {
     const penalty = Math.min(obsoleteDocs * 3, 9);
     score -= penalty;
-    factors.push({ label: `${obsoleteDocs} doc(s) obsoleto(s)`, impact: "negative", detail: `-${penalty} pts` });
+    factors.push({ label: `${obsoleteDocs} ${obsoleteDocs === 1 ? "doc obsoleto" : "docs obsoletos"}`, impact: "negative", detail: `-${penalty} pts` });
   } else if (data.documentos.length > 0) {
     score += 3;
     factors.push({ label: "Documentação em dia", impact: "positive", detail: "+3 pts" });
@@ -355,7 +408,7 @@ export default function ClientesPage() {
               {filtered.map((c) => {
                 const st = statusMap[c.status];
                 return (
-                  <tr key={c.id} onClick={() => navigate(`/clientes/${c.id}`)} className={`border-b border-certifica-200/60 cursor-pointer transition-colors hover:bg-certifica-50/50`}>
+                  <tr key={c.id} onClick={() => setSelectedId(c.id)} className={`border-b border-certifica-200/60 cursor-pointer transition-colors ${selectedId === c.id ? "bg-certifica-50" : "hover:bg-certifica-50/50"}`}>
                     <td className="px-3 py-2.5"><span className="text-[11.5px] text-certifica-700 font-mono" style={{ fontWeight: 500 }}>{c.cnpj}</span></td>
                     <td className="px-3 py-2.5">
                       <span className="text-[12.5px] text-certifica-dark block" style={{ fontWeight: 500 }}>{c.nomeFantasia}</span>
@@ -371,7 +424,7 @@ export default function ClientesPage() {
                     </td>
                     <td className="px-3 py-2.5"><span className="text-[11.5px] text-certifica-500">{c.consultorResponsavel}</span></td>
                     <td className="px-3 py-2.5">
-                      <button className="p-1 text-certifica-500/30 hover:text-certifica-700 transition-colors cursor-pointer">
+                      <button onClick={(e) => { e.stopPropagation(); navigate(`/clientes/${c.id}`); }} className="p-1 text-certifica-500/30 hover:text-certifica-700 transition-colors cursor-pointer" title="Ver perfil completo">
                         <Eye className="w-[13px] h-[13px]" strokeWidth={1.5} />
                       </button>
                     </td>
@@ -388,7 +441,7 @@ export default function ClientesPage() {
 
       {/* ── Detail Panel with 360 View ── */}
       {selected && (
-        <div className="w-full lg:w-[340px] lg:flex-shrink-0 border-t lg:border-t-0 lg:border-l border-certifica-200 bg-white flex flex-col overflow-y-auto">
+        <div className="w-full lg:w-[340px] lg:flex-shrink-0 border-t lg:border-t-0 lg:border-l border-certifica-200 bg-white flex flex-col overflow-y-auto" style={{ animation: "certifica-panel-slide 250ms cubic-bezier(.22,1,.36,1)" }}>
           {/* Header */}
           <div className="px-4 py-3 border-b border-certifica-200">
             <div className="flex items-center justify-between mb-2">
@@ -405,11 +458,23 @@ export default function ClientesPage() {
                 </button>
               </div>
             </div>
-            <div className="text-[14px] text-certifica-900 mb-0.5" style={{ fontWeight: 600 }}>{selected.nomeFantasia}</div>
-            <div className="text-[11px] text-certifica-500 mb-2" style={{ lineHeight: "1.4" }}>{selected.razaoSocial}</div>
-            <div className="flex items-center gap-1.5 text-[11px] text-certifica-700 font-mono" style={{ fontWeight: 500 }}>
-              <Hash className="w-3 h-3 text-certifica-500/50" strokeWidth={1.5} />
-              {selected.cnpj}
+            <div className="flex items-center gap-3 mt-1">
+              <CompanyAvatarSmall
+                name={selected.nomeFantasia}
+                id={selected.id}
+                logoUrl={selected.logoUrl}
+                onLogoChange={() => {
+                  refetch();
+                }}
+              />
+              <div className="flex-1 min-w-0">
+                <div className="text-[14px] text-certifica-900 truncate" style={{ fontWeight: 600 }}>{selected.nomeFantasia}</div>
+                <div className="text-[11px] text-certifica-500 truncate" style={{ lineHeight: "1.4" }}>{selected.razaoSocial}</div>
+                <div className="flex items-center gap-1.5 text-[11px] text-certifica-700 font-mono mt-0.5" style={{ fontWeight: 500 }}>
+                  <Hash className="w-3 h-3 text-certifica-500/50" strokeWidth={1.5} />
+                  {selected.cnpj}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -568,6 +633,13 @@ export default function ClientesPage() {
           </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes certifica-panel-slide {
+          from { opacity: 0; transform: translateX(16px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+      `}</style>
 
       {/* ── New Client Modal ── */}
       {showNewModal && (

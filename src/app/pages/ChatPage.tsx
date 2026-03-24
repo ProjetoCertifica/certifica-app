@@ -5,7 +5,7 @@ import {
   MoreVertical, Check, CheckCheck, Wifi, Phone,
   Image as ImageIcon, FileText, X, Plus, Download,
   Info, Trash2, Archive, Pin, Star, User, Users,
-  Play, Pause, Bot, Clock, ArrowLeft, UserPlus, Contact,
+  Play, Pause, Bot, BotOff, Clock, ArrowLeft, UserPlus, Contact,
   FolderOpen, ChevronRight, Mail,
 } from 'lucide-react';
 import {
@@ -17,6 +17,7 @@ import { supabase } from '../lib/supabase';
 import type { WhatsAppMessage, Document } from '../lib/database.types';
 import { findContatoByPhone, type ContatoWithEmpresa } from '../lib/useContatos';
 import { usePipeline, type PipelineColumn, type PipelineCard } from '../lib/usePipeline';
+import { useAgentPause } from '../lib/useAiSettings';
 import { toast } from 'sonner';
 
 /* ── types ───────────────────────────────────────── */
@@ -404,6 +405,7 @@ export default function ChatPage() {
 
   // Profile panel (right side)
   const [showProfile, setShowProfile] = useState(false);
+  const agentPause = useAgentPause(selectedChat ? chatPhone(selectedChat) : undefined);
 
   // Pipeline (kanban)
   const pipeline = usePipeline();
@@ -1366,6 +1368,22 @@ export default function ChatPage() {
 
               {/* Actions */}
               <div className="flex items-center gap-1 relative" ref={chatMenuRef}>
+                {/* AI Pause/Resume */}
+                <button
+                  onClick={() => agentPause.toggle(30)}
+                  disabled={agentPause.loading}
+                  title={agentPause.paused ? "IA pausada — clique para retomar" : "Pausar IA por 30min"}
+                  className={`p-2 rounded-full transition-colors ${
+                    agentPause.paused
+                      ? "text-nao-conformidade bg-nao-conformidade/10 hover:bg-nao-conformidade/20"
+                      : "text-certifica-accent hover:bg-certifica-accent/10"
+                  }`}
+                >
+                  {agentPause.paused ? <BotOff className="w-4.5 h-4.5" strokeWidth={1.5} /> : <Bot className="w-4.5 h-4.5" strokeWidth={1.5} />}
+                </button>
+                {agentPause.paused && (
+                  <span className="text-[9px] bg-nao-conformidade/10 text-nao-conformidade px-1.5 py-0.5 rounded-full" style={{ fontWeight: 600 }}>IA pausada</span>
+                )}
                 <button onClick={() => setShowChatMenu(v => !v)} className="p-2 rounded-full text-gray-500 hover:bg-gray-200 transition-colors">
                   <MoreVertical className="w-5 h-5" />
                 </button>

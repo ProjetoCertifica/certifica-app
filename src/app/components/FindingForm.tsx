@@ -6,7 +6,7 @@ import { ChevronDown, Tag, ClipboardList, Wrench, CheckSquare } from "lucide-rea
 // ---------------------------------------------------------------------------
 
 export interface FindingFormData {
-  // Card 1: Identificacao
+  // Card 1: Identificação
   norma: string;
   clausula: string;
   subclausula: string;
@@ -19,7 +19,7 @@ export interface FindingFormData {
   severidade: string;
   prioridade: string;
 
-  // Card 2: Evidencia e Analise
+  // Card 2: Evidência e Análise
   descricao: string;
   criterio_requisito: string;
   evidencia: string;
@@ -155,10 +155,10 @@ export function FindingForm({ data, onChange, compact = false }: FindingFormProp
   return (
     <div className="flex flex-col gap-2 overflow-y-auto">
       {/* ---------------------------------------------------------------- */}
-      {/* Card 1 - Identificacao do Achado                                 */}
+      {/* Card 1 - Identificação do Achado                                 */}
       {/* ---------------------------------------------------------------- */}
       <div>
-        {renderHeader(0, <Tag size={13} />, "Identificacao do Achado")}
+        {renderHeader(0, <Tag size={13} />, "Identificação do Achado")}
         {!collapsed[0] && (
           <div className={`${px} grid grid-cols-2 ${gap} border border-t-0 border-certifica-200 rounded-b-[4px]`}>
             {/* Norma | Clausula */}
@@ -167,23 +167,23 @@ export function FindingForm({ data, onChange, compact = false }: FindingFormProp
               <input className={inputCx} placeholder="ISO 9001:2015" value={data.norma} onChange={text("norma")} />
             </div>
             <div>
-              <label className={labelCx} style={labelStyle}>Clausula</label>
+              <label className={labelCx} style={labelStyle}>Cláusula</label>
               <input className={inputCx} placeholder="7.1.5" value={data.clausula} onChange={text("clausula")} />
             </div>
 
             {/* Subclausula | Titulo */}
             <div>
-              <label className={labelCx} style={labelStyle}>Subclausula</label>
+              <label className={labelCx} style={labelStyle}>Subcláusula</label>
               <input className={inputCx} value={data.subclausula} onChange={text("subclausula")} />
             </div>
             <div>
-              <label className={labelCx} style={labelStyle}>Titulo da clausula</label>
+              <label className={labelCx} style={labelStyle}>Título da cláusula</label>
               <input className={inputCx} value={data.titulo_clausula} onChange={text("titulo_clausula")} />
             </div>
 
             {/* Area | Processo */}
             <div>
-              <label className={labelCx} style={labelStyle}>Area auditada</label>
+              <label className={labelCx} style={labelStyle}>Área auditada</label>
               <input className={inputCx} placeholder="Metrologia" value={data.area_auditada} onChange={text("area_auditada")} />
             </div>
             <div>
@@ -197,19 +197,19 @@ export function FindingForm({ data, onChange, compact = false }: FindingFormProp
               <input className={inputCx} value={data.setor} onChange={text("setor")} />
             </div>
             <div>
-              <label className={labelCx} style={labelStyle}>Local da evidencia</label>
-              <input className={inputCx} placeholder="Laboratorio dimensional" value={data.local_evidencia} onChange={text("local_evidencia")} />
+              <label className={labelCx} style={labelStyle}>Local da evidência</label>
+              <input className={inputCx} placeholder="Laboratório dimensional" value={data.local_evidencia} onChange={text("local_evidencia")} />
             </div>
 
-            {/* Classificacao - full width */}
+            {/* Classificação - full width */}
             <div className="col-span-2">
-              <label className={labelCx} style={labelStyle}>Classificacao</label>
+              <label className={labelCx} style={labelStyle}>Classificação</label>
               <select className={selectCx} value={data.tipo} onChange={sel("tipo")}>
                 <option value="">Selecione...</option>
                 <option value="conformidade">Conformidade</option>
                 <option value="nc-maior">NC Maior</option>
                 <option value="nc-menor">NC Menor</option>
-                <option value="observacao">Observacao</option>
+                <option value="observacao">Observação</option>
                 <option value="oportunidade">Oportunidade</option>
               </select>
             </div>
@@ -219,9 +219,9 @@ export function FindingForm({ data, onChange, compact = false }: FindingFormProp
               <label className={labelCx} style={labelStyle}>Severidade</label>
               <select className={selectCx} value={data.severidade} onChange={sel("severidade")}>
                 <option value="">Selecione...</option>
-                <option value="critica">Critica</option>
+                <option value="critica">Crítica</option>
                 <option value="alta">Alta</option>
-                <option value="media">Media</option>
+                <option value="media">Média</option>
                 <option value="baixa">Baixa</option>
               </select>
             </div>
@@ -231,7 +231,7 @@ export function FindingForm({ data, onChange, compact = false }: FindingFormProp
                 <option value="">Selecione...</option>
                 <option value="imediata">Imediata</option>
                 <option value="alta">Alta</option>
-                <option value="media">Media</option>
+                <option value="media">Média</option>
                 <option value="baixa">Baixa</option>
               </select>
             </div>
@@ -240,42 +240,42 @@ export function FindingForm({ data, onChange, compact = false }: FindingFormProp
       </div>
 
       {/* ---------------------------------------------------------------- */}
-      {/* Card 2 - Evidencia e Analise                                     */}
+      {/* Card 2 - Evidência e Análise                                     */}
       {/* ---------------------------------------------------------------- */}
       <div>
-        {renderHeader(1, <ClipboardList size={13} />, "Evidencia e Analise")}
+        {renderHeader(1, <ClipboardList size={13} />, "Evidência e Análise")}
         {!collapsed[1] && (
           <div className={`${px} grid grid-cols-2 ${gap} border border-t-0 border-certifica-200 rounded-b-[4px]`}>
             {/* Descricao */}
             <div className="col-span-2">
-              <label className={labelCx} style={labelStyle}>Descricao da constatacao</label>
+              <label className={labelCx} style={labelStyle}>Descrição da constatação</label>
               <textarea className={textareaCx} rows={3} value={data.descricao} onChange={area("descricao")} />
             </div>
 
             {/* Criterio */}
             <div className="col-span-2">
-              <label className={labelCx} style={labelStyle}>Criterio / Requisito esperado</label>
+              <label className={labelCx} style={labelStyle}>Critério / Requisito esperado</label>
               <textarea className={textareaCx} rows={2} value={data.criterio_requisito} onChange={area("criterio_requisito")} />
             </div>
 
             {/* Evidencia */}
             <div className="col-span-2">
-              <label className={labelCx} style={labelStyle}>Evidencia objetiva</label>
+              <label className={labelCx} style={labelStyle}>Evidência objetiva</label>
               <textarea className={textareaCx} rows={3} value={data.evidencia} onChange={area("evidencia")} />
             </div>
 
-            {/* Tipo de evidencia */}
+            {/* Tipo de evidência */}
             <div className="col-span-2">
-              <label className={labelCx} style={labelStyle}>Tipo de evidencia</label>
+              <label className={labelCx} style={labelStyle}>Tipo de evidência</label>
               <select className={selectCx} value={data.tipo_evidencia} onChange={sel("tipo_evidencia")}>
                 <option value="">Selecione...</option>
                 <option value="documental">Documental</option>
                 <option value="entrevista">Entrevista</option>
-                <option value="observacao-campo">Observacao em campo</option>
+                <option value="observacao-campo">Observação em campo</option>
                 <option value="amostragem">Amostragem</option>
-                <option value="registro">Registro sistemico</option>
-                <option value="inspecao">Inspecao visual</option>
-                <option value="medicao">Medicao/verificacao</option>
+                <option value="registro">Registro sistêmico</option>
+                <option value="inspecao">Inspeção visual</option>
+                <option value="medicao">Medição/verificação</option>
               </select>
             </div>
 
@@ -285,13 +285,13 @@ export function FindingForm({ data, onChange, compact = false }: FindingFormProp
               <input className={inputCx} value={data.documento_avaliado} onChange={text("documento_avaliado")} />
             </div>
             <div>
-              <label className={labelCx} style={labelStyle}>Codigo do documento</label>
+              <label className={labelCx} style={labelStyle}>Código do documento</label>
               <input className={inputCx} value={data.codigo_documento} onChange={text("codigo_documento")} />
             </div>
 
             {/* Revisao | Registro */}
             <div>
-              <label className={labelCx} style={labelStyle}>Revisao do documento</label>
+              <label className={labelCx} style={labelStyle}>Revisão do documento</label>
               <input className={inputCx} value={data.revisao_documento} onChange={text("revisao_documento")} />
             </div>
             <div>
@@ -305,19 +305,19 @@ export function FindingForm({ data, onChange, compact = false }: FindingFormProp
               <input className={inputCx} value={data.amostra_qtd} onChange={text("amostra_qtd")} />
             </div>
             <div>
-              <label className={labelCx} style={labelStyle}>Criterio de amostragem</label>
+              <label className={labelCx} style={labelStyle}>Critério de amostragem</label>
               <input className={inputCx} value={data.criterio_amostragem} onChange={text("criterio_amostragem")} />
             </div>
 
             {/* Entrevistados */}
             <div className="col-span-2">
               <label className={labelCx} style={labelStyle}>Entrevistado(s)</label>
-              <input className={inputCx} placeholder="Nome — Cargo — Area" value={data.entrevistados} onChange={text("entrevistados")} />
+              <input className={inputCx} placeholder="Nome — Cargo — Área" value={data.entrevistados} onChange={text("entrevistados")} />
             </div>
 
-            {/* Condicao encontrada */}
+            {/* Condição encontrada */}
             <div className="col-span-2">
-              <label className={labelCx} style={labelStyle}>Condicao encontrada</label>
+              <label className={labelCx} style={labelStyle}>Condição encontrada</label>
               <textarea className={textareaCx} rows={2} value={data.condicao_encontrada} onChange={area("condicao_encontrada")} />
             </div>
 
@@ -339,13 +339,13 @@ export function FindingForm({ data, onChange, compact = false }: FindingFormProp
               <input className={inputCx} value={data.risco_associado} onChange={text("risco_associado")} />
             </div>
 
-            {/* Abrangencia | Qtd itens */}
+            {/* Abrangência | Qtd itens */}
             <div>
-              <label className={labelCx} style={labelStyle}>Abrangencia</label>
+              <label className={labelCx} style={labelStyle}>Abrangência</label>
               <select className={selectCx} value={data.abrangencia} onChange={sel("abrangencia")}>
                 <option value="">Selecione...</option>
                 <option value="pontual">Pontual</option>
-                <option value="sistemico">Sistemico</option>
+                <option value="sistemico">Sistêmico</option>
               </select>
             </div>
             <div>
@@ -355,7 +355,7 @@ export function FindingForm({ data, onChange, compact = false }: FindingFormProp
 
             {/* Periodo | Recorrencia */}
             <div>
-              <label className={labelCx} style={labelStyle}>Periodo afetado</label>
+              <label className={labelCx} style={labelStyle}>Período afetado</label>
               <input className={inputCx} value={data.periodo_afetado} onChange={text("periodo_afetado")} />
             </div>
             <div className="flex items-end pb-1">
@@ -366,7 +366,7 @@ export function FindingForm({ data, onChange, compact = false }: FindingFormProp
                   checked={data.recorrencia}
                   onChange={(e) => set("recorrencia", e.target.checked)}
                 />
-                Recorrencia?
+                Recorrência?
               </label>
             </div>
           </div>
@@ -380,19 +380,19 @@ export function FindingForm({ data, onChange, compact = false }: FindingFormProp
         {renderHeader(2, <Wrench size={13} />, "Tratamento")}
         {!collapsed[2] && (
           <div className={`${px} grid grid-cols-2 ${gap} border border-t-0 border-certifica-200 rounded-b-[4px]`}>
-            {/* Contencao imediata */}
+            {/* Contenção imediata */}
             <div className="col-span-2">
-              <label className={labelCx} style={labelStyle}>Contencao imediata</label>
+              <label className={labelCx} style={labelStyle}>Contenção imediata</label>
               <textarea className={textareaCx} rows={2} value={data.contencao_imediata} onChange={area("contencao_imediata")} />
             </div>
 
             {/* Data contencao | Responsavel */}
             <div>
-              <label className={labelCx} style={labelStyle}>Data da contencao</label>
+              <label className={labelCx} style={labelStyle}>Data da contenção</label>
               <input type="date" className={inputCx} value={data.data_contencao} onChange={text("data_contencao")} />
             </div>
             <div>
-              <label className={labelCx} style={labelStyle}>Responsavel contencao</label>
+              <label className={labelCx} style={labelStyle}>Responsável contenção</label>
               <input className={inputCx} value={data.responsavel_contencao} onChange={text("responsavel_contencao")} />
             </div>
 
@@ -408,50 +408,56 @@ export function FindingForm({ data, onChange, compact = false }: FindingFormProp
               <textarea className={textareaCx} rows={2} value={data.causa_raiz} onChange={area("causa_raiz")} />
             </div>
 
-            {/* Metodo de analise */}
+            {/* Método de análise */}
             <div className="col-span-2">
-              <label className={labelCx} style={labelStyle}>Metodo de analise</label>
+              <label className={labelCx} style={labelStyle}>Método de análise</label>
               <select className={selectCx} value={data.metodo_analise} onChange={sel("metodo_analise")}>
                 <option value="">Selecione...</option>
                 <option value="5-porques">5 Porques</option>
                 <option value="ishikawa">Ishikawa</option>
-                <option value="simples">Analise simples</option>
+                <option value="simples">Análise simples</option>
                 <option value="outro">Outro</option>
               </select>
             </div>
 
-            {/* Correcao imediata */}
+            {/* Correção imediata */}
             <div className="col-span-2">
-              <label className={labelCx} style={labelStyle}>Correcao imediata</label>
+              <label className={labelCx} style={labelStyle}>Correção imediata</label>
               <textarea className={textareaCx} rows={2} value={data.correcao_imediata} onChange={area("correcao_imediata")} />
             </div>
 
-            {/* Acao corretiva */}
+            {/* Ação corretiva */}
             <div className="col-span-2">
-              <label className={labelCx} style={labelStyle}>Acao corretiva</label>
+              <label className={labelCx} style={labelStyle}>Ação corretiva</label>
               <textarea className={textareaCx} rows={3} value={data.acao_corretiva} onChange={area("acao_corretiva")} />
             </div>
 
-            {/* Acao preventiva */}
+            {/* Ação preventiva */}
             <div className="col-span-2">
-              <label className={labelCx} style={labelStyle}>Acao preventiva</label>
+              <label className={labelCx} style={labelStyle}>Ação preventiva</label>
               <textarea className={textareaCx} rows={2} value={data.acao_preventiva} onChange={area("acao_preventiva")} />
             </div>
 
-            {/* Recomendacao do auditor */}
+            {/* Recomendação do auditor */}
             <div className="col-span-2">
-              <label className={labelCx} style={labelStyle}>Recomendacao do auditor</label>
+              <label className={labelCx} style={labelStyle}>Recomendação do auditor</label>
               <textarea className={textareaCx} rows={2} value={data.recomendacao_auditor} onChange={area("recomendacao_auditor")} />
             </div>
 
-            {/* Responsavel | Prazo */}
+            {/* Responsável | Prazo */}
             <div>
-              <label className={labelCx} style={labelStyle}>Responsavel</label>
+              <label className={labelCx} style={labelStyle}>Responsável</label>
               <input className={inputCx} value={data.responsavel} onChange={text("responsavel")} />
             </div>
             <div>
               <label className={labelCx} style={labelStyle}>Prazo</label>
               <input type="date" className={inputCx} value={data.prazo} onChange={text("prazo")} />
+              {data.prazo && new Date(data.prazo) < new Date(new Date().toDateString()) && (
+                <div className="flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-[3px] bg-red-50 border border-red-200">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-600 flex-shrink-0"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                  <span className="text-[10px] text-red-700" style={{ fontWeight: 600 }}>VENCIDO</span>
+                </div>
+              )}
             </div>
 
             {/* Custo | Status */}
@@ -480,15 +486,15 @@ export function FindingForm({ data, onChange, compact = false }: FindingFormProp
         {renderHeader(3, <CheckSquare size={13} />, "Fechamento")}
         {!collapsed[3] && (
           <div className={`${px} grid grid-cols-2 ${gap} border border-t-0 border-certifica-200 rounded-b-[4px]`}>
-            {/* Verificacao eficacia */}
+            {/* Verificação eficácia */}
             <div className="col-span-2">
-              <label className={labelCx} style={labelStyle}>Como sera verificada a eficacia</label>
+              <label className={labelCx} style={labelStyle}>Como será verificada a eficácia</label>
               <textarea className={textareaCx} rows={2} value={data.verificacao_eficacia} onChange={area("verificacao_eficacia")} />
             </div>
 
-            {/* Responsavel | Data */}
+            {/* Responsável | Data */}
             <div>
-              <label className={labelCx} style={labelStyle}>Responsavel pela verificacao</label>
+              <label className={labelCx} style={labelStyle}>Responsável pela verificação</label>
               <input className={inputCx} value={data.responsavel_verificacao} onChange={text("responsavel_verificacao")} />
             </div>
             <div>
@@ -498,7 +504,7 @@ export function FindingForm({ data, onChange, compact = false }: FindingFormProp
 
             {/* Status eficacia */}
             <div className="col-span-2">
-              <label className={labelCx} style={labelStyle}>Status da eficacia</label>
+              <label className={labelCx} style={labelStyle}>Status da eficácia</label>
               <select className={selectCx} value={data.status_eficacia} onChange={sel("status_eficacia")}>
                 <option value="">Selecione...</option>
                 <option value="pendente">Pendente</option>
@@ -508,9 +514,9 @@ export function FindingForm({ data, onChange, compact = false }: FindingFormProp
               </select>
             </div>
 
-            {/* Observacoes / Anexos */}
+            {/* Observações / Anexos */}
             <div className="col-span-2">
-              <label className={labelCx} style={labelStyle}>Observacoes / Anexos</label>
+              <label className={labelCx} style={labelStyle}>Observações / Anexos</label>
               <textarea
                 className={textareaCx}
                 rows={2}

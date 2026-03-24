@@ -271,7 +271,8 @@ export default function RelatoriosPage() {
   // ── Executive summary ─────────────────────────────────────────────────────────
   const executiveSummary = useMemo(() => {
     const tplName = templates.find((t) => t.id === selectedTemplate)?.name ?? "Relatório";
-    return `${tplName}: ${totalProjetos} projeto(s) cadastrado(s), ${projetosAtivos} em andamento. Taxa de conformidade: ${dashKpis.conformidade}%. Total de ${dashKpis.ncs} NC(s) em ${totalAuditorias} auditoria(s). ${totalMeetings} reunião(ões) e ${totalDocuments} documento(s) na base. ${totalClientes} cliente(s) ativo(s).`;
+    const pl = (n: number, s: string, p: string) => n === 1 ? s : p;
+    return `${tplName}: ${totalProjetos} ${pl(totalProjetos, "projeto cadastrado", "projetos cadastrados")}, ${projetosAtivos} em andamento. Taxa de conformidade: ${dashKpis.conformidade}%. Total de ${dashKpis.ncs} ${pl(dashKpis.ncs, "NC", "NCs")} em ${totalAuditorias} ${pl(totalAuditorias, "auditoria", "auditorias")}. ${totalMeetings} ${pl(totalMeetings, "reunião", "reuniões")} e ${totalDocuments} ${pl(totalDocuments, "documento", "documentos")} na base. ${totalClientes} ${pl(totalClientes, "cliente ativo", "clientes ativos")}.`;
   }, [selectedTemplate, totalProjetos, projetosAtivos, totalClientes, totalAuditorias, totalMeetings, totalDocuments, dashKpis]);
 
   const alertCompanies = useMemo(() => companyTableData.filter((c) => c.ncs >= 3), [companyTableData]);
@@ -537,7 +538,7 @@ export default function RelatoriosPage() {
           <div className="bg-white border border-certifica-200 rounded-[4px] p-3">
             <div className="flex items-center gap-1.5 mb-2">
               <Bot className="w-3.5 h-3.5 text-certifica-accent" />
-              <span className="text-[11px] text-certifica-900" style={{ fontWeight: 600 }}>Resumo Analítico</span>
+              <span className="text-[11px] text-certifica-900" style={{ fontWeight: 600 }}>Resumo — {templates.find((t) => t.id === selectedTemplate)?.name ?? "Analítico"}</span>
             </div>
             <p className="text-[10.5px] text-certifica-dark leading-relaxed">{executiveSummary}</p>
           </div>
@@ -553,7 +554,7 @@ export default function RelatoriosPage() {
               ) : (
                 alertCompanies.map((c) => (
                   <div key={c.empresa} className="text-[10px] text-nao-conformidade border border-nao-conformidade/20 rounded-[3px] px-2 py-1">
-                    {c.empresa}: {c.ncs} NC(s) registrada(s)
+                    {c.empresa}: {c.ncs} {c.ncs === 1 ? "NC registrada" : "NCs registradas"}
                   </div>
                 ))
               )}

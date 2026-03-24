@@ -4,6 +4,12 @@ import type { Pipeline, PipelineInsert, PipelineUpdate } from "./database.types"
 
 export type { Pipeline };
 
+const PIPELINES_CHANGED_EVENT = "certifica:pipelines-changed";
+
+function notifyPipelinesChanged() {
+  window.dispatchEvent(new Event(PIPELINES_CHANGED_EVENT));
+}
+
 export function usePipelines() {
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +38,13 @@ export function usePipelines() {
     load();
   }, [load]);
 
+  // Reload when another instance changes pipelines
+  useEffect(() => {
+    const handler = () => { load(); };
+    window.addEventListener(PIPELINES_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(PIPELINES_CHANGED_EVENT, handler);
+  }, [load]);
+
   const create = useCallback(
     async (data: Omit<PipelineInsert, "user_id">): Promise<Pipeline | null> => {
       const { data: user } = await supabase.auth.getUser();
@@ -46,6 +59,7 @@ export function usePipelines() {
         return null;
       }
       setPipelines((prev) => [...prev, inserted]);
+      notifyPipelinesChanged();
       return inserted;
     },
     []
@@ -65,6 +79,7 @@ export function usePipelines() {
       setPipelines((prev) =>
         prev.map((p) => (p.id === id ? { ...p, ...data } : p))
       );
+      notifyPipelinesChanged();
       return true;
     },
     []
@@ -82,6 +97,7 @@ export function usePipelines() {
         return false;
       }
       setPipelines((prev) => prev.filter((p) => p.id !== id));
+      notifyPipelinesChanged();
       return true;
     },
     []

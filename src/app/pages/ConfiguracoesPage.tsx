@@ -6,7 +6,7 @@ import { DSCard } from "../components/ds/DSCard";
 import { DSInput } from "../components/ds/DSInput";
 import { DSSelect } from "../components/ds/DSSelect";
 import { DSTextarea } from "../components/ds/DSTextarea";
-import { Bell, CalendarClock, Database, Lock, MessageCircle, Plus, RefreshCw, Save, Shield, Trash2, Wifi, WifiOff, CalendarDays, CheckCircle2, XCircle, ExternalLink } from "lucide-react";
+import { Bell, CalendarClock, Database, Lock, MessageCircle, Plus, RefreshCw, Save, Shield, Trash2, Wifi, WifiOff, CalendarDays, CheckCircle2, XCircle, ExternalLink, UserCheck, UserX } from "lucide-react";
 import { useSettings } from "../lib/useSettings";
 import { useWhatsApp } from "../lib/useWhatsApp";
 import { useGoogleCalendar } from "../lib/useGoogleCalendar";
@@ -99,7 +99,7 @@ const defaultIntegrations: IntegrationItem[] = [
 ];
 
 export default function ConfiguracoesPage() {
-  const { settings, profiles, roles, loading, error, getSetting, saveAllSettings, load } = useSettings();
+  const { settings, profiles, roles, loading, error, getSetting, saveAllSettings, load, updateProfile, deactivateProfile } = useSettings();
   const whatsApp = useWhatsApp();
   const googleCalendar = useGoogleCalendar();
 
@@ -222,6 +222,37 @@ export default function ConfiguracoesPage() {
     }));
   }, [settings, getSetting]);
 
+  // Friendly names for raw table names
+  const tableNameMap: Record<string, string> = {
+    clientes: "Empresas",
+    projetos: "Projetos",
+    pipeline_columns: "Colunas do Pipeline",
+    pipeline_cards: "Cards do Pipeline",
+    audits: "Auditorias",
+    documentos: "Documentos",
+    contatos: "Contatos",
+    entregaveis: "Entregáveis",
+    pipelines: "Pipelines",
+    documents: "Documentos",
+    meetings: "Reuniões",
+    trainings: "Treinamentos",
+    audit_findings: "Constatações",
+    audit_logs: "Logs",
+    settings: "Configurações",
+    profiles: "Perfis",
+    roles: "Papéis",
+  };
+
+  const humanizeTable = (table: string): string => tableNameMap[table] ?? table;
+  const humanizeId = (id: string): string => {
+    if (!id) return "—";
+    // UUID pattern: 8-4-4-4-12 hex chars
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return `${id.slice(0, 8)}...`;
+    }
+    return id;
+  };
+
   // Fetch audit_logs from Supabase
   useEffect(() => {
     const fetchLogs = async () => {
@@ -238,9 +269,9 @@ export default function ConfiguracoesPage() {
         const mapped: AuditLogItem[] = (data ?? []).map((l: any) => ({
           id: l.id,
           date: new Date(l.created_at).toLocaleString("pt-BR"),
-          actor: l.usuario_id ?? "Sistema",
-          action: `${l.acao} em ${l.tabela} (id: ${l.registro_id})`,
-          module: l.tabela,
+          actor: l.usuario_id ? humanizeId(l.usuario_id) : "Sistema",
+          action: `${l.acao} em ${humanizeTable(l.tabela)} (id: ${humanizeId(l.registro_id)})`,
+          module: humanizeTable(l.tabela),
         }));
 
         setLogs(mapped);
@@ -306,7 +337,10 @@ export default function ConfiguracoesPage() {
       )}
       <DSCard header={<span className="text-[13px] text-certifica-900" style={{ fontWeight: 600 }}>Usuários e perfis</span>}>
         <div className="space-y-2">
-          {users.map((u) => (
+          {users.map((u) => {
+            // Find the matching DB profile to get the role_id for updates
+            const dbProfile = profiles.find((p) => p.id === u.id);
+            return (
             <div key={u.id} className="border border-certifica-200 rounded-[4px] px-3 py-2 flex items-center justify-between">
               <div>
                 <div className="text-[12px] text-certifica-900" style={{ fontWeight: 600 }}>{u.name}</div>
@@ -317,17 +351,42 @@ export default function ConfiguracoesPage() {
                 <DSSelect
                   label=""
                   value={u.role}
-                  onChange={() => {
-                    // Role changes would require updating the DB profile; kept read-only for now
+                  onChange={async (e) => {
+                    const newRoleName = e.target.value;
+                    const matchedRole = roles.find((r) => r.name === newRoleName);
+                    if (!matchedRole) return;
+                    const ok = await updateProfile(u.id, { role_id: matchedRole.id });
+                    if (ok) toast.success(`Papel de ${u.name} alterado para ${newRoleName}.`);
+                    else toast.error(`Erro ao alterar papel de ${u.name}.`);
                   }}
                   options={roleNames.map((r) => ({ value: r, label: r }))}
                   className="h-7 text-[11px]"
                 />
+                <button
+                  title={u.status === "ativo" ? "Desativar usuário" : "Reativar usuário"}
+                  className={`p-1.5 rounded-[4px] transition-colors ${
+                    u.status === "ativo"
+                      ? "text-certifica-500 hover:text-nao-conformidade hover:bg-red-50"
+                      : "text-certifica-500 hover:text-conformidade hover:bg-green-50"
+                  }`}
+                  onClick={async () => {
+                    const newActive = u.status !== "ativo";
+                    const ok = await updateProfile(u.id, { active: newActive });
+                    if (ok) toast.success(`${u.name} ${newActive ? "reativado" : "desativado"} com sucesso.`);
+                    else toast.error(`Erro ao ${newActive ? "reativar" : "desativar"} ${u.name}.`);
+                  }}
+                >
+                  {u.status === "ativo"
+                    ? <UserX className="w-3.5 h-3.5" strokeWidth={1.5} />
+                    : <UserCheck className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  }
+                </button>
               </div>
             </div>
-          ))}
+            );
+          })}
           {users.length === 0 && !loading && (
-            <div className="text-[12px] text-certifica-500 py-2">Nenhum usuario encontrado.</div>
+            <div className="text-[12px] text-certifica-500 py-2">Nenhum usuário encontrado.</div>
           )}
         </div>
       </DSCard>
@@ -344,11 +403,11 @@ export default function ConfiguracoesPage() {
             icon={<Plus className="w-3 h-3" strokeWidth={1.5} />}
             onClick={() => {
               if (!newUser.name.trim() || !newUser.email.trim()) return;
-              toast.info("Criacao de usuarios requer acesso ao painel de autenticacao.");
+              toast.info("Criação de usuários requer acesso ao painel de autenticação.");
               setNewUser({ name: "", email: "", role: "consultor" });
             }}
           >
-            Criar usuario
+            Criar usuário
           </DSButton>
         </div>
       </DSCard>
@@ -407,6 +466,31 @@ export default function ConfiguracoesPage() {
           </table>
         </div>
       </DSCard>
+
+      <div className="flex justify-end">
+        <DSButton
+          size="sm"
+          icon={<Save className="w-3 h-3" strokeWidth={1.5} />}
+          onClick={async () => {
+            try {
+              const promises = Object.entries(matrix).map(([roleName, perms]) =>
+                supabase.from("roles").update({ permissions: perms }).eq("name", roleName)
+              );
+              const results = await Promise.all(promises);
+              const hasError = results.some((r) => r.error);
+              if (hasError) {
+                toast.error("Erro ao salvar algumas permissões. Verifique o console.");
+              } else {
+                toast.success("Permissões salvas com sucesso.");
+              }
+            } catch {
+              toast.error("Erro ao salvar permissões.");
+            }
+          }}
+        >
+          Salvar Permissões
+        </DSButton>
+      </div>
 
       <DSCard header={<span className="text-[13px] text-certifica-900" style={{ fontWeight: 600 }}>Políticas de senha e segurança</span>}>
         <div className="grid grid-cols-2 gap-2">
@@ -614,13 +698,11 @@ export default function ConfiguracoesPage() {
             <div className="bg-amber-50 border border-amber-200 rounded-[4px] px-3 py-2 flex items-start gap-2">
               <WifiOff className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
               <div className="text-[11px] text-amber-800 space-y-1">
-                <div style={{ fontWeight: 600 }}>Como configurar o Z-API:</div>
+                <div style={{ fontWeight: 600 }}>Configuração do WhatsApp:</div>
                 <ol className="list-decimal list-inside space-y-0.5 text-[10.5px]">
-                  <li>Acesse <span className="font-mono bg-amber-100 px-1 rounded">app.z-api.io</span> e crie uma instância</li>
-                  <li>Copie o <span className="font-mono bg-amber-100 px-1 rounded">Instance ID</span> e o <span className="font-mono bg-amber-100 px-1 rounded">Token</span></li>
-                  <li>Acesse o <span style={{ fontWeight: 600 }}>Vercel</span> → seu projeto → <span className="font-mono bg-amber-100 px-1 rounded">Settings → Environment Variables</span></li>
-                  <li>Adicione <span className="font-mono bg-amber-100 px-1 rounded">ZAPI_INSTANCE_ID</span> e <span className="font-mono bg-amber-100 px-1 rounded">ZAPI_TOKEN</span></li>
-                  <li>Faça redeploy e clique em <span style={{ fontWeight: 600 }}>Testar conexão</span></li>
+                  <li>Crie uma instância no Z-API</li>
+                  <li>Configure o Instance ID e o Token no painel de administração</li>
+                  <li>Clique em <span style={{ fontWeight: 600 }}>Testar conexão</span> para verificar</li>
                 </ol>
               </div>
             </div>
@@ -659,19 +741,11 @@ export default function ConfiguracoesPage() {
             )}
           </div>
 
-          {/* Variables reference */}
+          {/* WhatsApp config info */}
           <div className="bg-certifica-50 border border-certifica-200 rounded-[4px] px-3 py-2">
-            <div className="text-[10px] text-certifica-500 mb-1.5" style={{ fontWeight: 600 }}>VARIÁVEIS DE AMBIENTE (Vercel)</div>
-            <div className="space-y-1">
-              {[
-                { key: "ZAPI_INSTANCE_ID", desc: "ID da instância Z-API" },
-                { key: "ZAPI_TOKEN", desc: "Token de autenticação" },
-              ].map(({ key, desc }) => (
-                <div key={key} className="flex items-center gap-2">
-                  <code className="bg-certifica-dark text-green-400 text-[10px] px-2 py-0.5 rounded font-mono">{key}</code>
-                  <span className="text-[10px] text-certifica-500">{desc}</span>
-                </div>
-              ))}
+            <div className="text-[10px] text-certifica-500" style={{ fontWeight: 600 }}>Configuração do WhatsApp</div>
+            <div className="text-[10px] text-certifica-500 mt-1">
+              O Instance ID e o Token do Z-API devem ser configurados pelo administrador do sistema.
             </div>
           </div>
         </div>
@@ -777,10 +851,9 @@ export default function ConfiguracoesPage() {
           </div>
 
           <div className="bg-certifica-50 border border-certifica-200 rounded-[4px] px-3 py-2">
-            <div className="text-[10px] text-certifica-500 mb-1.5" style={{ fontWeight: 600 }}>VARIÁVEL DE AMBIENTE NECESSÁRIA (Vercel)</div>
-            <div className="flex items-center gap-2">
-              <code className="bg-certifica-dark text-green-400 text-[10px] px-2 py-0.5 rounded font-mono">RECALL_API_TOKEN</code>
-              <span className="text-[10px] text-certifica-500">Token de API do Recall.ai (mesma variável do bot de gravação)</span>
+            <div className="text-[10px] text-certifica-500" style={{ fontWeight: 600 }}>Configuração do Google Calendar</div>
+            <div className="text-[10px] text-certifica-500 mt-1">
+              A integração com o Google Calendar deve ser configurada pelo administrador do sistema.
             </div>
           </div>
         </div>
@@ -867,10 +940,10 @@ export default function ConfiguracoesPage() {
         </DSCard>
         <DSCard>
           <div className="flex items-center justify-between">
-            <span className="text-[11px] text-certifica-500">Ultimo save</span>
+            <span className="text-[11px] text-certifica-500">Último save</span>
             <Bell className="w-3.5 h-3.5 text-certifica-500" strokeWidth={1.5} />
           </div>
-          <div className="text-[12px] text-certifica-900 mt-2" style={{ fontWeight: 600 }}>{saveStamp || "Nao salvo"}</div>
+          <div className="text-[12px] text-certifica-900 mt-2" style={{ fontWeight: 600 }}>{saveStamp || "Não salvo"}</div>
         </DSCard>
       </div>
 

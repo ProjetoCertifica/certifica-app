@@ -56,8 +56,8 @@ export const faseColors: Record<number, string> = {
 export const faseLabels: Record<number, string> = {
   0: "Proposta",
   1: "Planejamento",
-  2: "Solucao",
-  3: "Verificacao",
+  2: "Solução",
+  3: "Verificação",
   4: "Acompanhamento",
 };
 
@@ -66,14 +66,14 @@ export type StatusVariant = "conformidade" | "nao-conformidade" | "observacao" |
 export const statusConfig: Record<string, { label: string; variant: StatusVariant }> = {
   proposta: { label: "Proposta", variant: "oportunidade" },
   "em-andamento": { label: "Em andamento", variant: "observacao" },
-  concluido: { label: "Concluido", variant: "conformidade" },
+  concluido: { label: "Concluído", variant: "conformidade" },
   pausado: { label: "Pausado", variant: "outline" },
   cancelado: { label: "Cancelado", variant: "nao-conformidade" },
 };
 
 export const prioridadeConfig: Record<string, { label: string; color: string }> = {
   alta: { label: "Alta", color: "#7A1E1E" },
-  media: { label: "Media", color: "#8C6A1F" },
+  media: { label: "Média", color: "#8C6A1F" },
   baixa: { label: "Baixa", color: "#6B7280" },
 };
 

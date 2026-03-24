@@ -14,6 +14,9 @@ export interface ColumnWithCards extends PipelineColumn {
   cards: PipelineCard[];
 }
 
+const PIPELINE_CHANGED = "certifica:pipeline-changed";
+function notifyPipelineChanged() { window.dispatchEvent(new Event(PIPELINE_CHANGED)); }
+
 export function usePipeline(pipelineId?: string | null) {
   const [columns, setColumns] = useState<ColumnWithCards[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,6 +69,12 @@ export function usePipeline(pipelineId?: string | null) {
     load();
   }, [load]);
 
+  useEffect(() => {
+    const handler = () => { load(); };
+    window.addEventListener(PIPELINE_CHANGED, handler);
+    return () => window.removeEventListener(PIPELINE_CHANGED, handler);
+  }, [load]);
+
   const createColumn = useCallback(
     async (data: PipelineColumnInsert): Promise<PipelineColumn | null> => {
       const insertData = pipelineId
@@ -85,6 +94,7 @@ export function usePipeline(pipelineId?: string | null) {
 
       const withCards: ColumnWithCards = { ...inserted, cards: [] };
       setColumns((prev) => [...prev, withCards].sort((a, b) => a.position - b.position));
+      notifyPipelineChanged();
       return inserted;
     },
     [pipelineId]
@@ -105,6 +115,7 @@ export function usePipeline(pipelineId?: string | null) {
       setColumns((prev) =>
         prev.map((c) => (c.id === id ? { ...c, ...data } : c))
       );
+      notifyPipelineChanged();
       return true;
     },
     []
@@ -130,6 +141,7 @@ export function usePipeline(pipelineId?: string | null) {
             : col
         )
       );
+      notifyPipelineChanged();
       return inserted;
     },
     []
@@ -169,6 +181,7 @@ export function usePipeline(pipelineId?: string | null) {
             : col
         );
       });
+      notifyPipelineChanged();
       return true;
     },
     []
@@ -186,6 +199,7 @@ export function usePipeline(pipelineId?: string | null) {
         return false;
       }
       await load();
+      notifyPipelineChanged();
       return true;
     },
     [load]
@@ -209,6 +223,7 @@ export function usePipeline(pipelineId?: string | null) {
             : col
         )
       );
+      notifyPipelineChanged();
       return true;
     },
     []
@@ -226,6 +241,7 @@ export function usePipeline(pipelineId?: string | null) {
         return false;
       }
       setColumns((prev) => prev.filter((col) => col.id !== id));
+      notifyPipelineChanged();
       return true;
     },
     []

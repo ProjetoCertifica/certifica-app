@@ -17,7 +17,7 @@ export function useSettings() {
     try {
       const [settingsRes, profilesRes, rolesRes] = await Promise.all([
         supabase.from("settings").select("*").order("categoria").order("chave"),
-        supabase.from("profiles").select(`*, roles(*)`).eq("active", true).order("full_name"),
+        supabase.from("profiles").select(`*, roles(*)`).order("full_name"),
         supabase.from("roles").select("*").order("name"),
       ]);
 

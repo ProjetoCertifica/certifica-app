@@ -65,8 +65,14 @@ const companies = [
   "TechSoft Sistemas", "EcoVerde Sustentável", "BioFarma Ltda",
 ];
 
+function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!domain) return email;
+  return local.slice(0, 3) + "***@" + domain;
+}
+
 export default function TreinamentosPage() {
-  const { trainings, loading, error, createTraining, updateTraining, removeTraining, enroll, uploadMaterial } = useTrainings();
+  const { trainings, loading, error, createTraining, updateTraining, removeTraining, enroll, updateEnrollment, removeEnrollment, uploadMaterial } = useTrainings();
 
   const [search, setSearch]             = useState("");
   const [catFilter, setCatFilter]       = useState<TrainingCategory | "todas">("todas");
@@ -227,6 +233,162 @@ export default function TreinamentosPage() {
     const ok = await removeTraining(id);
     if (ok) toast.success("Treinamento removido.");
     else toast.error("Erro ao remover treinamento.");
+  };
+
+  // ── Participant management handlers ────────────────────────────────────
+  const handleEnrollmentStatusChange = async (enrollmentId: string, trainingId: string, newStatus: UIEnrollStatus) => {
+    const ok = await updateEnrollment(enrollmentId, trainingId, { status: newStatus });
+    if (ok) toast.success(`Status alterado para "${enrollStatusMeta[newStatus].label}".`);
+    else toast.error("Erro ao alterar status do participante.");
+  };
+
+  const handleEnrollmentNotaBlur = async (enrollmentId: string, trainingId: string, value: string) => {
+    const nota = value === "" ? null : Math.min(100, Math.max(0, Number(value)));
+    const ok = await updateEnrollment(enrollmentId, trainingId, { nota });
+    if (ok) toast.success("Nota atualizada.");
+    else toast.error("Erro ao atualizar nota.");
+  };
+
+  const handleRemoveEnrollment = async (enrollmentId: string, trainingId: string, participantName: string) => {
+    if (!window.confirm(`Remover "${participantName}" deste treinamento?`)) return;
+    const ok = await removeEnrollment(enrollmentId, trainingId);
+    if (ok) toast.success("Participante removido.");
+    else toast.error("Erro ao remover participante.");
+  };
+
+  const handleBulkPresence = async (training: TrainingWithEnrollments) => {
+    const inscritos = training.enrollments.filter((e) => e.status === "inscrito");
+    if (inscritos.length === 0) {
+      toast.info("Nenhum participante com status \"Inscrito\" para marcar presença.");
+      return;
+    }
+    let successCount = 0;
+    for (const e of inscritos) {
+      const ok = await updateEnrollment(e.id, training.id, { status: "presente" });
+      if (ok) successCount++;
+    }
+    toast.success(`Presença registrada para ${successCount} participante${successCount !== 1 ? "s" : ""}.`);
+  };
+
+  const generateCertificateHtml = (
+    participantName: string,
+    trainingTitle: string,
+    norma: string,
+    cargaHoraria: number,
+    dataInicio: string | null,
+    dataFim: string | null,
+  ): string => {
+    const today = new Date().toLocaleDateString("pt-BR");
+    const periodo = dataInicio && dataFim
+      ? `${new Date(dataInicio).toLocaleDateString("pt-BR")} a ${new Date(dataFim).toLocaleDateString("pt-BR")}`
+      : dataInicio
+        ? `A partir de ${new Date(dataInicio).toLocaleDateString("pt-BR")}`
+        : "Data não informada";
+
+    return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Certificado - ${participantName}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;600&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #f5f5f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+    .certificate {
+      width: 900px; padding: 60px; background: #fff;
+      border: 3px solid #1a365d; position: relative;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    .certificate::before {
+      content: ''; position: absolute; inset: 8px;
+      border: 1px solid #cbd5e0; pointer-events: none;
+    }
+    .header { text-align: center; margin-bottom: 40px; }
+    .logo-placeholder {
+      width: 60px; height: 60px; margin: 0 auto 16px;
+      border-radius: 50%; background: #1a365d; display: flex;
+      align-items: center; justify-content: center;
+      color: #fff; font-family: 'Inter', sans-serif; font-weight: 600; font-size: 22px;
+    }
+    .title {
+      font-family: 'Playfair Display', serif; font-size: 28px;
+      color: #1a365d; letter-spacing: 4px; text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .subtitle { font-family: 'Inter', sans-serif; font-size: 11px; color: #718096; letter-spacing: 2px; text-transform: uppercase; }
+    .body { text-align: center; margin-bottom: 36px; }
+    .preamble { font-family: 'Inter', sans-serif; font-size: 13px; color: #4a5568; margin-bottom: 20px; }
+    .participant-name {
+      font-family: 'Playfair Display', serif; font-size: 32px;
+      color: #1a365d; border-bottom: 2px solid #e2e8f0;
+      display: inline-block; padding-bottom: 6px; margin-bottom: 20px;
+    }
+    .details { font-family: 'Inter', sans-serif; font-size: 13px; color: #4a5568; line-height: 2; }
+    .details strong { color: #2d3748; }
+    .footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 50px; }
+    .signature-block { text-align: center; width: 220px; }
+    .signature-line { border-top: 1px solid #a0aec0; margin-bottom: 6px; }
+    .signature-label { font-family: 'Inter', sans-serif; font-size: 10px; color: #718096; }
+    .date-block { font-family: 'Inter', sans-serif; font-size: 11px; color: #718096; text-align: center; }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .certificate { box-shadow: none; width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="certificate">
+    <div class="header">
+      <div class="logo-placeholder">C</div>
+      <div class="title">Certificado de Conclusão</div>
+      <div class="subtitle">Certifica - Gestão de Certificação e Compliance</div>
+    </div>
+    <div class="body">
+      <div class="preamble">Certificamos que</div>
+      <div class="participant-name">${participantName}</div>
+      <div class="details">
+        concluiu com aproveitamento o treinamento<br>
+        <strong>${trainingTitle}</strong><br>
+        ${norma ? `Norma de referência: <strong>${norma}</strong><br>` : ""}
+        Carga horária: <strong>${cargaHoraria}h</strong><br>
+        Período: <strong>${periodo}</strong>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="signature-block">
+        <div class="signature-line"></div>
+        <div class="signature-label">Instrutor(a) responsável</div>
+      </div>
+      <div class="date-block">Emitido em ${today}</div>
+      <div class="signature-block">
+        <div class="signature-line"></div>
+        <div class="signature-label">Coordenação de treinamentos</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+  };
+
+  const handleGenerateCertificate = async (enrollment: Enrollment, training: TrainingWithEnrollments) => {
+    const html = generateCertificateHtml(
+      enrollment.participante_nome,
+      training.titulo,
+      training.norma ?? "",
+      training.carga_horaria,
+      training.data_inicio,
+      training.data_fim,
+    );
+    // Open in new window
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+    }
+    // Mark enrollment with a placeholder certificado_url
+    const ok = await updateEnrollment(enrollment.id, training.id, { certificado_url: `certificado_${enrollment.id}` });
+    if (ok) toast.success("Certificado gerado com sucesso!");
+    else toast.error("Certificado aberto, mas erro ao salvar registro.");
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -503,8 +665,19 @@ export default function TreinamentosPage() {
                 })()}
 
                 <div>
-                  <div className="text-[10px] uppercase tracking-wider text-certifica-500 mb-1.5" style={{ fontWeight: 600 }}>
-                    Participantes ({liveSelected.enrollments.length})
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="text-[10px] uppercase tracking-wider text-certifica-500" style={{ fontWeight: 600 }}>
+                      Participantes ({liveSelected.enrollments.length})
+                    </div>
+                    {liveSelected.enrollments.some((e) => e.status === "inscrito") && (
+                      <button
+                        onClick={() => handleBulkPresence(liveSelected)}
+                        className="flex items-center gap-1 text-[10px] text-conformidade hover:text-conformidade/80 cursor-pointer"
+                        style={{ fontWeight: 600 }}
+                      >
+                        <CheckCircle2 className="w-3 h-3" /> Registrar Presença
+                      </button>
+                    )}
                   </div>
                   {liveSelected.enrollments.length === 0 ? (
                     <p className="text-[11px] text-certifica-500 italic">Nenhum participante matriculado.</p>
@@ -512,23 +685,76 @@ export default function TreinamentosPage() {
                     <div className="space-y-1.5">
                       {liveSelected.enrollments.map((e) => {
                         const st = enrollStatusMeta[e.status as UIEnrollStatus] ?? { label: e.status, variant: "outline" as const };
+                        const showNota = ["presente", "aprovado", "reprovado"].includes(e.status);
                         return (
                           <div key={e.id} className="border border-certifica-200 rounded-[4px] p-2.5">
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-[11px] text-certifica-dark" style={{ fontWeight: 600 }}>{e.participante_nome}</span>
-                              <DSBadge variant={st.variant}>{st.label}</DSBadge>
+                              <div className="flex items-center gap-1.5">
+                                <DSBadge variant={st.variant}>{st.label}</DSBadge>
+                                {e.certificado_url && (
+                                  <span className="text-conformidade flex items-center gap-0.5 text-[10px]" style={{ fontWeight: 600 }}>
+                                    <Award className="w-3 h-3" />
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex items-center gap-3 text-[10px] text-certifica-500">
-                              <span>{e.participante_email}</span>
+                            <div className="flex items-center gap-3 text-[10px] text-certifica-500 mb-2">
+                              <span>{maskEmail(e.participante_email)}</span>
                               <span>Matrícula: {new Date(e.created_at).toLocaleDateString("pt-BR")}</span>
                               {e.nota != null && (
                                 <span>Nota: <strong>{e.nota}%</strong></span>
                               )}
-                              {e.certificado_url && (
-                                <span className="text-conformidade flex items-center gap-0.5">
-                                  <Award className="w-3 h-3" /> Certificado
-                                </span>
+                            </div>
+                            {/* Management controls */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <select
+                                value={e.status}
+                                onChange={(ev) => handleEnrollmentStatusChange(e.id, liveSelected.id, ev.target.value as UIEnrollStatus)}
+                                className="h-6 px-1.5 rounded-[3px] border border-certifica-200 text-[10px] bg-white cursor-pointer"
+                              >
+                                <option value="inscrito">Inscrito</option>
+                                <option value="presente">Presente</option>
+                                <option value="ausente">Ausente</option>
+                                <option value="aprovado">Aprovado</option>
+                                <option value="reprovado">Reprovado</option>
+                              </select>
+                              {showNota && (
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  defaultValue={e.nota ?? ""}
+                                  placeholder="Nota"
+                                  onBlur={(ev) => handleEnrollmentNotaBlur(e.id, liveSelected.id, ev.target.value)}
+                                  className="h-6 w-16 px-1.5 rounded-[3px] border border-certifica-200 text-[10px]"
+                                />
                               )}
+                              {e.status === "aprovado" && !e.certificado_url && (
+                                <button
+                                  onClick={() => handleGenerateCertificate(e, liveSelected)}
+                                  className="flex items-center gap-0.5 h-6 px-2 rounded-[3px] bg-conformidade/10 text-conformidade text-[10px] hover:bg-conformidade/20 cursor-pointer"
+                                  style={{ fontWeight: 600 }}
+                                >
+                                  <Award className="w-3 h-3" /> Gerar Certificado
+                                </button>
+                              )}
+                              {e.status === "aprovado" && e.certificado_url && (
+                                <button
+                                  onClick={() => handleGenerateCertificate(e, liveSelected)}
+                                  className="flex items-center gap-0.5 h-6 px-2 rounded-[3px] bg-certifica-100 text-certifica-500 text-[10px] hover:bg-certifica-200 cursor-pointer"
+                                  style={{ fontWeight: 500 }}
+                                >
+                                  <Download className="w-3 h-3" /> Ver Certificado
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleRemoveEnrollment(e.id, liveSelected.id, e.participante_nome)}
+                                className="ml-auto text-certifica-400 hover:text-red-500 cursor-pointer"
+                                title="Remover participante"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           </div>
                         );

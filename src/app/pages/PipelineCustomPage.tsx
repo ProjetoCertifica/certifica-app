@@ -26,7 +26,23 @@ import {
   Tag,
   Clock,
   Target,
+  List,
+  Columns3,
+  GanttChart,
+  Filter,
 } from "lucide-react";
+import { PipelineListView } from "../components/projetos/PipelineListView";
+import { PipelineGanttView } from "../components/projetos/PipelineGanttView";
+import { PipelineFunnelView } from "../components/projetos/PipelineFunnelView";
+
+type PipelineViewMode = "lista" | "kanban" | "gantt" | "funil";
+
+const pipelineViewConfig: { key: PipelineViewMode; label: string; icon: React.ElementType }[] = [
+  { key: "lista", label: "Lista", icon: List },
+  { key: "kanban", label: "Kanban", icon: Columns3 },
+  { key: "gantt", label: "Gantt", icon: GanttChart },
+  { key: "funil", label: "Funil", icon: Filter },
+];
 
 const DND_TYPE = "PIPE_CARD";
 const COLUMN_PALETTE = ["#2B8EAD", "#274C77", "#1F5E3B", "#8C6A1F", "#7A1E1E", "#0E2A47", "#6B7280"];
@@ -68,6 +84,16 @@ export default function PipelineCustomPage() {
   const pipeline = pipelines.find((p) => p.id === pipelineId);
 
   /* ── State ── */
+  const [viewMode, setViewMode] = useState<PipelineViewMode>(() => {
+    const saved = localStorage.getItem(`certifica_pipeline_view_${pipelineId}`);
+    return (saved as PipelineViewMode) || "kanban";
+  });
+
+  const handleViewChange = useCallback((mode: PipelineViewMode) => {
+    setViewMode(mode);
+    if (pipelineId) localStorage.setItem(`certifica_pipeline_view_${pipelineId}`, mode);
+  }, [pipelineId]);
+
   const [showNewColumn, setShowNewColumn] = useState(false);
   const [showNewCard, setShowNewCard] = useState<string | null>(null); // column id
   const [showEditColumn, setShowEditColumn] = useState<string | null>(null);
@@ -226,9 +252,32 @@ export default function PipelineCustomPage() {
           </div>
         </div>
         {pipeline.description && <p className="text-[11px] text-certifica-500 mt-0.5">{pipeline.description}</p>}
+
+        {/* ── View Mode Tabs ── */}
+        <div className="flex items-center bg-certifica-100/60 rounded-[4px] p-0.5 mt-3 w-fit">
+          {pipelineViewConfig.map((v) => {
+            const Icon = v.icon;
+            const isActive = viewMode === v.key;
+            return (
+              <button
+                key={v.key}
+                onClick={() => handleViewChange(v.key)}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[3px] transition-all duration-200 cursor-pointer ${
+                  isActive
+                    ? "bg-white text-certifica-accent-dark shadow-sm"
+                    : "text-certifica-500 hover:text-certifica-dark"
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" strokeWidth={1.5} />
+                <span className="text-[11px]" style={{ fontWeight: isActive ? 600 : 400 }}>{v.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* ── Kanban Board ── */}
+      {/* ── View Content ── */}
+      {viewMode === "kanban" && (
       <DndProvider backend={HTML5Backend}>
         <div className="flex-1 overflow-x-auto overflow-y-hidden px-5 py-4">
           <div className="flex gap-3 h-full min-w-min">
@@ -258,6 +307,25 @@ export default function PipelineCustomPage() {
           </div>
         </div>
       </DndProvider>
+      )}
+
+      {viewMode === "lista" && (
+        <div className="flex-1 overflow-auto px-5 py-4">
+          <PipelineListView cols={columns} onSelectCard={setSelectedCardId} onAddCard={(colId) => { resetCardForm(); setShowNewCard(colId); }} />
+        </div>
+      )}
+
+      {viewMode === "gantt" && (
+        <div className="flex-1 overflow-auto px-5 py-4">
+          <PipelineGanttView cols={columns} onSelectCard={setSelectedCardId} />
+        </div>
+      )}
+
+      {viewMode === "funil" && (
+        <div className="flex-1 overflow-auto px-5 py-4">
+          <PipelineFunnelView cols={columns} onSelectCard={setSelectedCardId} />
+        </div>
+      )}
 
       {/* ═══ MODALS ═══ */}
 

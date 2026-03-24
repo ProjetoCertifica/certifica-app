@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { supabase } from "../lib/supabase";
 import { Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, ArrowRight, CheckCircle2, UserPlus } from "lucide-react";
+import { toast } from "sonner";
 import logoImg from "../../assets/logo-certifica-dark.png";
 
 type Mode = "login" | "forgot" | "reset_sent" | "register" | "register_sent";
@@ -21,8 +22,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-
-  const IS_DEMO = !import.meta.env.VITE_SUPABASE_URL;
 
   // Check if already logged in → redirect to app
   useEffect(() => {
@@ -124,14 +123,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDemoAccess = async () => {
-    setLoading(true);
-    // In demo mode, just navigate to app — useRBAC will use demo profile
-    setTimeout(() => {
-      navigate("/", { replace: true });
-    }, 500);
   };
 
   return (
@@ -266,7 +257,7 @@ export default function LoginPage() {
                     </label>
                     <button
                       type="button"
-                      onClick={() => setMode("forgot")}
+                      onClick={() => toast.info("Entre em contato com o administrador para redefinir sua senha")}
                       className="text-[11px] text-[#2B8EAD] hover:text-[#1F3F66] transition-colors cursor-pointer"
                       style={{ fontWeight: 500 }}
                     >
@@ -331,7 +322,7 @@ export default function LoginPage() {
                   Não tem conta?{" "}
                   <button
                     type="button"
-                    onClick={() => { setMode("register"); setError(null); }}
+                    onClick={() => toast.info("Entre em contato com o administrador para criar sua conta")}
                     className="text-[#2B8EAD] hover:text-[#1F3F66] font-medium transition-colors cursor-pointer"
                   >
                     Criar conta
@@ -558,28 +549,6 @@ export default function LoginPage() {
             )}
           </div>
 
-          {/* Demo mode banner */}
-          {IS_DEMO && (
-            <div className="px-8 pb-6 pt-0">
-              <div className="border-t border-gray-100 pt-5">
-                <div className="text-center mb-3">
-                  <span className="text-[11px] text-gray-400">— ou —</span>
-                </div>
-                <button
-                  onClick={handleDemoAccess}
-                  disabled={loading}
-                  className="w-full h-9 flex items-center justify-center gap-2 rounded-[5px] border border-gray-200 bg-gray-50 text-[12.5px] text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-all cursor-pointer disabled:opacity-50"
-                  style={{ fontWeight: 500 }}
-                >
-                  {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                  Acessar em modo demonstração
-                </button>
-                <p className="text-[10.5px] text-gray-400 text-center mt-2">
-                  Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY para usar autenticação real
-                </p>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Footer */}

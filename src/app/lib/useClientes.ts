@@ -6,6 +6,9 @@ export interface ClienteWithProjetos extends Cliente {
   projetos_count: number;
 }
 
+const CLIENTES_CHANGED = "certifica:clientes-changed";
+function notifyClientesChanged() { window.dispatchEvent(new Event(CLIENTES_CHANGED)); }
+
 export function useClientes() {
   const [clientes, setClientes] = useState<ClienteWithProjetos[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +39,12 @@ export function useClientes() {
 
   useEffect(() => { fetch(); }, [fetch]);
 
+  useEffect(() => {
+    const handler = () => { fetch(); };
+    window.addEventListener(CLIENTES_CHANGED, handler);
+    return () => window.removeEventListener(CLIENTES_CHANGED, handler);
+  }, [fetch]);
+
   const create = useCallback(async (input: ClienteInsert) => {
     setError(null);
     const { data, error: err } = await supabase
@@ -45,6 +54,7 @@ export function useClientes() {
       .single();
     if (err) { setError(err.message); return null; }
     await fetch();
+    notifyClientesChanged();
     return data as Cliente;
   }, [fetch]);
 
@@ -56,6 +66,7 @@ export function useClientes() {
       .eq("id", id);
     if (err) { setError(err.message); return false; }
     await fetch();
+    notifyClientesChanged();
     return true;
   }, [fetch]);
 
@@ -67,6 +78,7 @@ export function useClientes() {
       .eq("id", id);
     if (err) { setError(err.message); return false; }
     await fetch();
+    notifyClientesChanged();
     return true;
   }, [fetch]);
 

@@ -17,6 +17,8 @@ import {
   parseBrDate,
   getProgressPercent,
   getDaysRemaining,
+  getRiskPrazo,
+  getRiskEscopo,
 } from "../../lib/projetosShared";
 
 /* ── Types ── */
@@ -43,11 +45,12 @@ const COLUMNS: FaseColumn[] = [
   { fase: 4, label: "Acompanhamento", color: "#0E2A47" },
 ];
 
-const temperatura: Record<string, { label: string; className: string }> = {
-  alta: { label: "Quente", className: "bg-nao-conformidade/10 text-nao-conformidade" },
-  media: { label: "Morno", className: "bg-observacao/12 text-observacao" },
-  baixa: { label: "Frio", className: "bg-certifica-100 text-certifica-500" },
-};
+function riskSemaphore(p: ProjetoUI): { label: string; className: string } {
+  const score = Math.max(getRiskPrazo(p), getRiskEscopo(p));
+  if (score >= 70) return { label: "Alto", className: "bg-nao-conformidade/10 text-nao-conformidade" };
+  if (score >= 50) return { label: "Médio", className: "bg-observacao/12 text-observacao" };
+  return { label: "Baixo", className: "bg-certifica-100 text-certifica-500" };
+}
 
 function parseCurrency(v: string): number {
   return parseFloat(v.replace(/[^\d,]/g, "").replace(",", ".")) || 0;
@@ -222,7 +225,7 @@ function DraggableProjectCard({
   const days = getDaysRemaining(p);
   const isUrgent = days >= 0 && days <= 30;
   const isCritical = days >= 0 && days <= 14;
-  const temp = temperatura[p.prioridade] || temperatura.media;
+  const temp = riskSemaphore(p);
   const cardColor = faseColors[p.fase] || "#6B7280";
 
   return (

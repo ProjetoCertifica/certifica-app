@@ -60,6 +60,8 @@ const docStatusMap: Record<string, { label: string; variant: "conformidade" | "n
 function CompanyAvatar({ name, id, logoUrl, onLogoChange }: { name: string; id: string; logoUrl?: string | null; onLogoChange?: (url: string) => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [localUrl, setLocalUrl] = useState(logoUrl);
+  useEffect(() => { setLocalUrl(logoUrl); }, [logoUrl]);
 
   const initials = name
     .split(/\s+/)
@@ -75,8 +77,7 @@ function CompanyAvatar({ name, id, logoUrl, onLogoChange }: { name: string; id: 
     if (!file || !onLogoChange) return;
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop() ?? "png";
-      const path = `logos/${id}.${ext}`;
+      const path = `logos/${id}`;
       const { error: uploadErr } = await supabase.storage
         .from("Certifica Arquivos")
         .upload(path, file, { upsert: true, contentType: file.type });
@@ -84,6 +85,7 @@ function CompanyAvatar({ name, id, logoUrl, onLogoChange }: { name: string; id: 
       const { data: urlData } = supabase.storage.from("Certifica Arquivos").getPublicUrl(path);
       const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
       await supabase.from("clientes").update({ logo_url: publicUrl }).eq("id", id);
+      setLocalUrl(publicUrl);
       onLogoChange(publicUrl);
     } catch (err) {
       console.error("Upload error:", err);
@@ -96,8 +98,8 @@ function CompanyAvatar({ name, id, logoUrl, onLogoChange }: { name: string; id: 
   return (
     <div className="relative group flex-shrink-0 w-16 h-16">
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-      {logoUrl ? (
-        <img src={logoUrl} alt={name} className="w-16 h-16 rounded-xl object-cover shadow-lg block" />
+      {localUrl ? (
+        <img src={localUrl} alt={name} className="w-16 h-16 rounded-xl object-cover shadow-lg block" />
       ) : (
         <div
           className="w-16 h-16 rounded-xl flex items-center justify-center text-white text-xl shadow-lg"
