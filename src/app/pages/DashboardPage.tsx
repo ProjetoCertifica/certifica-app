@@ -13,7 +13,6 @@ import {
   Clock,
   AlertCircle,
   ArrowUpRight,
-  Filter,
   Brain,
   X,
   RefreshCw,
@@ -536,10 +535,6 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-[13px] text-certifica-900" style={{ fontWeight: 600 }}>Projetos com semáforo de risco</span>
                     <div className="flex items-center gap-2">
-                      <DSButton variant="ghost" size="sm" className="h-6 px-2 text-[11px] text-certifica-500 border-0">
-                        <Filter className="w-3 h-3 mr-1" strokeWidth={1.5} />
-                        Filtrar
-                      </DSButton>
                       <DSButton
                         variant="ghost"
                         size="sm"
