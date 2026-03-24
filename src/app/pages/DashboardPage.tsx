@@ -18,7 +18,9 @@ import {
   X,
   RefreshCw,
   ExternalLink,
+  Bell,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useDashboard, type DashboardFilters, type DashboardProject } from "../lib/useDashboard";
 import { useProjetos } from "../lib/useProjetos";
 import { useClientes } from "../lib/useClientes";
@@ -26,7 +28,7 @@ import { APIFallback } from "../components/ErrorBoundary";
 
 type StatusVariant = "conformidade" | "nao-conformidade" | "observacao" | "oportunidade" | "outline";
 type LayerMode = "operacional" | "executiva";
-type KpiKey = "ativos" | "atrasos" | "ncs" | "auditorias" | "docs" | "conformidade" | "risco";
+type KpiKey = "ativos" | "atrasos" | "auditorias" | "consultorias" | "treinamentos" | "risco";
 
 const faseColors: Record<number, string> = { 1: "#274C77", 2: "#2F5E8E", 3: "#1F5E3B", 4: "#0E2A47" };
 
@@ -71,8 +73,8 @@ function SkeletonBlock({ className = "" }: { className?: string }) {
 
 function KpiSkeleton() {
   return (
-    <div className="grid grid-cols-7 gap-2">
-      {Array.from({ length: 7 }).map((_, i) => (
+    <div className="grid grid-cols-6 gap-2">
+      {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="bg-white border border-certifica-200 rounded-[4px] px-3 py-2 space-y-2">
           <SkeletonBlock className="h-3 w-16" />
           <SkeletonBlock className="h-6 w-12" />
@@ -109,6 +111,26 @@ export default function DashboardPage() {
   const [showNewProject, setShowNewProject] = React.useState(false);
   useBodyScrollLock(!!selectedKpi || !!detailProject || showNewProject);
   const [saving, setSaving] = React.useState(false);
+  const [sendingAlerts, setSendingAlerts] = React.useState(false);
+
+  const handleSendAlerts = async () => {
+    setSendingAlerts(true);
+    try {
+      const res = await fetch("/api/notifications/check-alerts", { method: "POST" });
+      const data = await res.json();
+      if (data.sent) {
+        toast.success(`Alertas enviados via WhatsApp!`, { description: `${data.details?.atrasados ?? 0} atrasos, ${data.details?.auditorias_proximas ?? 0} auditorias próximas, ${data.details?.prazo_proximo ?? 0} prazos críticos` });
+      } else if (data.alerts === 0) {
+        toast.info("Nenhum alerta para enviar. Tudo em dia!");
+      } else {
+        toast.error(data.error || data.message || "Erro ao enviar alertas");
+      }
+    } catch {
+      toast.error("Erro de conexão ao enviar alertas");
+    } finally {
+      setSendingAlerts(false);
+    }
+  };
   const [lastUpdated, setLastUpdated] = React.useState<Date>(() => new Date());
   const [nextRefreshSecs, setNextRefreshSecs] = React.useState(300);
 
@@ -201,10 +223,9 @@ export default function DashboardPage() {
   const kpiList: { key: KpiKey; label: string }[] = [
     { key: "ativos", label: "Projetos ativos" },
     { key: "atrasos", label: "Atrasos" },
-    { key: "ncs", label: "NCs abertas" },
     { key: "auditorias", label: "Auditorias" },
-    { key: "docs", label: "Docs pendentes" },
-    { key: "conformidade", label: "Taxa conformidade" },
+    { key: "consultorias", label: "Consultorias" },
+    { key: "treinamentos", label: "Treinamentos" },
     { key: "risco", label: "Risco de prazo" },
   ];
 
@@ -215,25 +236,24 @@ export default function DashboardPage() {
     switch (selectedKpi) {
       case "atrasos":
         return dashboard.projects.filter((p) => p.previsao && new Date(p.previsao) < now && p.status !== "concluido" && p.status !== "cancelado");
-      case "ncs":
-        return dashboard.audits.map((a) => ({
-          id: a.id,
-          cliente: a.cliente_nome,
-          norma: a.norma,
-          tipo: a.tipo,
-          ncs: a.ncs_count,
-          status: a.status,
-        }));
-      case "docs":
-        return dashboard.documents.filter((d) => d.status === "rascunho" || d.status === "em-revisao");
       case "risco":
         return dashboard.projects.filter((p) => riskScore(p) >= 40);
-      case "auditorias":
-        return dashboard.audits;
+      case "auditorias": {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return dashboard.audits.filter((a) => {
+          const d = a.data_inicio ? new Date(a.data_inicio) : null;
+          return !d || d >= today;
+        });
+      }
+      case "consultorias":
+        return dashboard.projects.filter((p) => p.status === "em-andamento");
+      case "treinamentos":
+        return dashboard.trainings.filter((t) => t.status !== "cancelado");
       default:
         return dashboard.projects;
     }
-  }, [selectedKpi, dashboard.projects, dashboard.audits, dashboard.documents]);
+  }, [selectedKpi, dashboard.projects, dashboard.audits, dashboard.trainings]);
 
   const drillTitle = kpiList.find((k) => k.key === selectedKpi)?.label ?? "";
 
@@ -256,38 +276,25 @@ export default function DashboardPage() {
       recs.push(`${highRisk[0].cliente_nome} com entrega em ${dias} dia${dias !== 1 ? "s" : ""} — revisar cronograma e pendências.`);
     }
 
-    // 3. Não conformidades abertas
-    if (k.ncs > 0 && recs.length < 3) {
-      if (k.conformidade < 75) {
-        recs.push(`Conformidade em ${k.conformidade}% — tratar as ${k.ncs} NC${k.ncs > 1 ? "s" : ""} abertas antes da próxima auditoria.`);
-      } else {
-        recs.push(`${k.ncs} não conformidade${k.ncs > 1 ? "s" : ""} em aberto. Elaborar plano de ação corretiva.`);
-      }
+    // 3. Atrasos detectados
+    if (k.atrasos > 0 && recs.length < 3) {
+      recs.push(`${k.atrasos} projeto${k.atrasos > 1 ? "s" : ""} em atraso detectado${k.atrasos > 1 ? "s" : ""} — renegociar prazo ou realocar consultores.`);
     }
 
-    // 4. Documentos pendentes de revisão
-    if (k.docs >= 3 && recs.length < 3) {
-      recs.push(`${k.docs} documentos em rascunho ou revisão pendentes — regularizar para manter rastreabilidade.`);
-    }
-
-    // 5. Muitas propostas sem conversão
+    // 4. Muitas propostas sem conversão
     const propostas = p.filter((proj) => proj.status === "proposta");
     if (propostas.length >= 3 && recs.length < 3) {
       recs.push(`${propostas.length} propostas abertas sem conversão — fazer follow-up com os clientes.`);
     }
 
-    // 6. Poucos projetos ativos mas boa conformidade
-    if (k.atrasos > 0 && recs.length < 3) {
-      recs.push(`${k.atrasos} projeto${k.atrasos > 1 ? "s" : ""} em atraso detectado${k.atrasos > 1 ? "s" : ""} — renegociar prazo ou realocar consultores.`);
+    // 5. Treinamentos pendentes
+    if (k.treinamentos > 0 && recs.length < 3) {
+      recs.push(`${k.treinamentos} treinamento${k.treinamentos > 1 ? "s" : ""} registrado${k.treinamentos > 1 ? "s" : ""} — verificar cronograma e inscrições.`);
     }
 
-    // 7. Parabéns se tudo bem
+    // 6. Parabéns se tudo bem
     if (recs.length === 0) {
-      if (k.conformidade >= 90) {
-        recs.push(`Conformidade em ${k.conformidade}% — carteira saudável. Manter cadência de auditorias internas.`);
-      } else {
-        recs.push("Nenhuma ação crítica identificada. Bom momento para antecipar auditorias do próximo ciclo.");
-      }
+      recs.push("Nenhuma ação crítica identificada. Bom momento para antecipar auditorias do próximo ciclo.");
     }
 
     // Completar até 3 com contexto geral
@@ -386,6 +393,15 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={handleSendAlerts}
+            disabled={sendingAlerts}
+            className="h-7 px-2 flex items-center gap-1 rounded-[4px] border border-certifica-200 text-certifica-500/60 hover:text-green-700 hover:border-green-400 transition-colors cursor-pointer disabled:opacity-40"
+            title="Enviar alertas via WhatsApp"
+          >
+            <Bell className={`w-3.5 h-3.5 ${sendingAlerts ? "animate-pulse" : ""}`} strokeWidth={1.5} />
+            <span className="text-[10px]">Alertas WhatsApp</span>
+          </button>
+          <button
             onClick={() => { dashboard.refetch(); setLastUpdated(new Date()); setNextRefreshSecs(300); }}
             disabled={dashboard.loading}
             className="h-7 w-7 flex items-center justify-center rounded-[4px] border border-certifica-200 text-certifica-500/60 hover:text-certifica-700 hover:border-certifica-400 transition-colors cursor-pointer disabled:opacity-40"
@@ -480,7 +496,7 @@ export default function DashboardPage() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
         {kpiList.map((kpi) => {
           const value = dashboard.kpis[kpi.key];
           const compare = dashboard.monthCompare[kpi.key];
@@ -497,7 +513,7 @@ export default function DashboardPage() {
             >
               <div className="text-[10px] text-certifica-500">{kpi.label}</div>
               <div className="text-[18px] text-certifica-900" style={{ fontWeight: 600 }}>
-                {value}{kpi.key === "conformidade" ? "%" : ""}
+                {value}
               </div>
               <div className={`text-[10px] ${positive ? "text-conformidade" : "text-nao-conformidade"}`}>
                 {positive ? "+" : ""}{delta}{suffix} vs período anterior
@@ -627,7 +643,9 @@ export default function DashboardPage() {
 
                 <DSCard header={<span className="text-[13px] text-certifica-900" style={{ fontWeight: 600 }}>Projetos por norma</span>}>
                   <div className="h-[160px] -mx-2 min-w-0" ref={chartRef}>
-                    {chartSize.w > 0 && chartSize.h > 0 && dashboard.byNorma.length > 0 && (
+                    {dashboard.byNorma.length === 0 ? (
+                      <div className="flex items-center justify-center h-full text-[11px] text-certifica-500">Nenhum projeto com norma definida</div>
+                    ) : chartSize.w > 0 && chartSize.h > 0 ? (
                       <BarChart width={chartSize.w} height={chartSize.h} data={dashboard.byNorma} margin={{ top: 4, right: 8, left: -28, bottom: 0 }} barSize={18}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#E6E8EB" vertical={false} />
                         <XAxis dataKey="norma" tick={{ fontSize: 10, fill: "#6B7280" }} tickLine={false} axisLine={{ stroke: "#E6E8EB" }} />
@@ -635,7 +653,7 @@ export default function DashboardPage() {
                         <Tooltip contentStyle={{ backgroundColor: "#0E2A47", border: "none", borderRadius: "4px", fontSize: "11px", color: "#E6E8EB", padding: "6px 10px" }} />
                         <Bar dataKey="projetos" fill="#2B8EAD" radius={[2, 2, 0, 0]} />
                       </BarChart>
-                    )}
+                    ) : null}
                   </div>
                 </DSCard>
               </div>
@@ -664,7 +682,7 @@ export default function DashboardPage() {
                           );
                         },
                       },
-                      { key: "ncs", header: "NCs", render: (row) => <span className="text-[12px]">{(row as any).ncs}</span> },
+                      { key: "auditorias", header: "Auditorias", render: (row) => <span className="text-[12px] font-mono">{(row as any).auditorias}</span> },
                     ]}
                     data={dashboard.executiveByConsultor}
                   />
@@ -672,19 +690,18 @@ export default function DashboardPage() {
               </DSCard>
 
               <div className="grid grid-cols-[1fr_1fr] gap-4 min-w-0">
-                {/* Conformidade by Norma */}
-                <DSCard header={<span className="text-[13px] text-certifica-900" style={{ fontWeight: 600 }}>Conformidade por norma</span>}>
+                {/* Distribuição por Norma */}
+                <DSCard header={<span className="text-[13px] text-certifica-900" style={{ fontWeight: 600 }}>Distribuição por norma</span>}>
                   <div className="space-y-2">
                     {dashboard.executiveByNorma.map((item) => (
                       <div key={item.norma} className="flex items-center gap-3">
                         <span className="text-[11px] text-certifica-700 w-[54px] flex-shrink-0">{item.norma}</span>
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-[11px] text-certifica-500">{item.projetos} projetos</span>
-                            <span className="text-[11px] text-certifica-dark font-mono" style={{ fontWeight: 600 }}>{item.conformidade}%</span>
+                            <span className="text-[11px] text-certifica-500">{item.projetos} projetos · {item.auditorias} auditorias</span>
                           </div>
                           <div className="h-[4px] bg-certifica-200 rounded-full overflow-hidden">
-                            <div className="h-full bg-conformidade rounded-full transition-all" style={{ width: `${item.conformidade}%` }} />
+                            <div className="h-full bg-certifica-accent rounded-full transition-all" style={{ width: `${Math.min(100, (item.projetos / Math.max(1, ...dashboard.executiveByNorma.map(n => n.projetos))) * 100)}%` }} />
                           </div>
                         </div>
                       </div>
@@ -788,10 +805,10 @@ export default function DashboardPage() {
               <DSCard header={<span className="text-[13px] text-certifica-900" style={{ fontWeight: 600 }}>Resumo executivo</span>}>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { label: "Taxa de conformidade", value: `${dashboard.kpis.conformidade}%` },
+                    { label: "Consultorias ativas", value: `${dashboard.kpis.consultorias}` },
                     { label: "Risco médio de prazo", value: `${dashboard.kpis.risco}` },
-                    { label: "Pendências críticas", value: `${alerts.filter((a) => a.priority >= 85).length}` },
-                    { label: "Alertas ativos", value: `${alerts.length}` },
+                    { label: "Auditorias", value: `${dashboard.kpis.auditorias}` },
+                    { label: "Treinamentos", value: `${dashboard.kpis.treinamentos}` },
                   ].map((s) => (
                     <div key={s.label}>
                       <div className="text-[16px] text-certifica-900" style={{ fontWeight: 600 }}>{s.value}</div>
@@ -837,26 +854,15 @@ export default function DashboardPage() {
             </div>
             <div className="p-4 max-h-[60vh] overflow-y-auto">
               {drillData.length === 0 ? (
-                <div className="py-8 text-center text-[12px] text-certifica-500">Nenhum registro encontrado.</div>
-              ) : selectedKpi === "ncs" ? (
+                <div className="py-8 text-center text-[12px] text-certifica-500">{selectedKpi === "auditorias" ? "Nenhuma auditoria futura agendada." : selectedKpi === "treinamentos" ? "Nenhum treinamento registrado." : "Nenhum registro encontrado."}</div>
+              ) : selectedKpi === "treinamentos" ? (
                 <DSTable
                   columns={[
-                    { key: "cliente", header: "Cliente", render: (row) => <span className="text-[12px]">{(row as any).cliente ?? (row as any).cliente_nome}</span> },
+                    { key: "titulo", header: "Treinamento", render: (row) => <span className="text-[12px]">{(row as any).titulo}</span> },
                     { key: "norma", header: "Norma", render: (row) => <span className="text-[12px]">{(row as any).norma}</span> },
-                    { key: "tipo", header: "Tipo", render: (row) => <span className="text-[12px]">{(row as any).tipo}</span> },
-                    { key: "ncs", header: "NCs", render: (row) => <span className="text-[12px] font-mono text-nao-conformidade" style={{ fontWeight: 600 }}>{(row as any).ncs ?? (row as any).ncs_count}</span> },
+                    { key: "instrutor", header: "Instrutor", render: (row) => <span className="text-[12px]">{(row as any).instrutor}</span> },
+                    { key: "vagas", header: "Vagas", render: (row) => <span className="text-[12px] font-mono">{(row as any).inscritos}/{(row as any).vagas}</span> },
                     { key: "status", header: "Status", render: (row) => <DSBadge variant="outline">{(row as any).status}</DSBadge> },
-                  ]}
-                  data={drillData}
-                />
-              ) : selectedKpi === "docs" ? (
-                <DSTable
-                  columns={[
-                    { key: "titulo", header: "Documento", render: (row) => <span className="text-[12px]">{(row as any).titulo}</span> },
-                    { key: "tipo", header: "Tipo", render: (row) => <span className="text-[12px]">{(row as any).tipo}</span> },
-                    { key: "norma", header: "Norma", render: (row) => <span className="text-[12px]">{(row as any).norma}</span> },
-                    { key: "status", header: "Status", render: (row) => <DSBadge variant="observacao">{(row as any).status}</DSBadge> },
-                    { key: "cliente", header: "Cliente", render: (row) => <span className="text-[12px]">{(row as any).cliente_nome}</span> },
                   ]}
                   data={drillData}
                 />

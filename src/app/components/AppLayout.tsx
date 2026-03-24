@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   ClipboardCheck,
   Users,
+  UserCheck,
   FolderKanban,
   GraduationCap,
   FolderOpen,
@@ -32,6 +33,7 @@ import {
   CheckCircle2,
   Menu,
   Plus,
+  Bot,
 } from "lucide-react";
 import { usePipelines } from "../lib/usePipelines";
 import { useGlobalSearch, type SearchResult } from "../lib/useGlobalSearch";
@@ -56,7 +58,9 @@ const navItems: NavItem[] = [
   { path: "/reunioes", label: "Reuniões", icon: Video },
   { path: "/calendario", label: "Calendário", icon: CalendarDays },
   { path: "/chat", label: "Chat", icon: MessageSquare },
+  { path: "/chatbot", label: "Chatbot IA", icon: Bot },
   { path: "/clientes", label: "Empresas", icon: Users },
+  { path: "/consultores", label: "Consultores", icon: UserCheck },
   {
     label: "Projetos",
     icon: FolderKanban,
@@ -1061,6 +1065,8 @@ function getBreadcrumb(pathname: string): string {
     "/treinamentos": "Treinamentos",
     "/relatorios": "Relatórios",
     "/configuracoes": "Configurações",
+    "/calendario": "Calendário",
+    "/chatbot": "Chatbot IA",
   };
   return map[pathname] || "Certifica";
 }

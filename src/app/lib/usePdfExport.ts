@@ -264,6 +264,26 @@ export interface FullAuditReportData {
     sistemaEstabelecido?: boolean;
   };
   parecerFinal?: string;
+  /* ── Campos FORM 9.2-01 ── */
+  numeroAuditoria?: string;
+  revisaoForm?: string;
+  endereco?: string;
+  municipioUf?: string;
+  telefone?: string;
+  email?: string;
+  filiais?: string;
+  numFuncionarios?: string;
+  turnosTrabalho?: string;
+  contato?: string;
+  equipeAuditora?: string[];
+  especialistaObservador?: string;
+  certificacoesExistentes?: string;
+  principaisClientes?: string;
+  principaisFornecedores?: string;
+  principaisProdutosServicos?: string;
+  historicoAuditorias?: { tipo: string; auditorData: string; ocorrencias: string }[];
+  listaAuditados?: { nome: string; areaProcesso: string; data: string }[];
+  qualificacaoAuditor?: string;
 }
 
 const FULL_REPORT_STYLE = `
@@ -870,35 +890,101 @@ export function buildFullAuditReportHtml(data: FullAuditReportData): string {
 <body>
   <div class="page">
 
-    <!-- CABEÇALHO -->
+    <!-- CABEÇALHO FORM 9.2-01 -->
     <div class="report-header">
       <div class="report-header-left">
         <img class="logo-mark" src="${window.location.origin}/logo-certifica-oficial.png" alt="Certifica" />
         <div>
-          <div class="report-title">Relatório de Auditoria</div>
-          <div class="report-subtitle">${escHtml(data.empresa)}${data.unidade ? ` | ${escHtml(data.unidade)}` : ""}</div>
+          <div class="report-title">Relatório de Auditoria Interna (RAI)</div>
+          <div class="report-subtitle">${data.numeroAuditoria ? `Auditoria Interna: Nº ${escHtml(data.numeroAuditoria)}` : escHtml(data.codigo)}${data.unidade ? ` | ${escHtml(data.unidade)}` : ""}</div>
         </div>
       </div>
       <div class="report-date">
+        ${data.revisaoForm ? `FORM 9.2-01 Revisão ${escHtml(data.revisaoForm)}<br/>` : ""}
         Gerado em: ${dateGenStr}<br/>
         Código: ${escHtml(data.codigo)}
       </div>
     </div>
 
-    <!-- DADOS DA AUDITORIA -->
+    <!-- DADOS DA ORGANIZAÇÃO -->
     <div class="section">
-      <div class="section-title">Dados da Auditoria</div>
+      <div class="section-title">Dados da Organização</div>
       <div class="audit-data">
-        <div class="audit-data-item"><div class="audit-data-label">Empresa</div><div class="audit-data-value">${escHtml(data.empresa)}</div></div>
-        <div class="audit-data-item"><div class="audit-data-label">Data da Auditoria</div><div class="audit-data-value">${formatDate(data.dataAuditoria)}</div></div>
-        <div class="audit-data-item"><div class="audit-data-label">Unidade / Local</div><div class="audit-data-value">${escHtml(data.unidade ?? data.empresa)}</div></div>
-        <div class="audit-data-item"><div class="audit-data-label">Auditor Líder</div><div class="audit-data-value">${escHtml(data.auditorLider)}</div></div>
-        <div class="audit-data-item"><div class="audit-data-label">Tipo</div><div class="audit-data-value">${auditTipoLabel(data.tipo)}</div></div>
-        <div class="audit-data-item"><div class="audit-data-label">Modalidade</div><div class="audit-data-value">${escHtml(data.norma)}</div></div>
-        ${data.escopo ? `
-        <div class="audit-data-item" style="grid-column:1/-1;border-right:none"><div class="audit-data-label">Escopo</div><div class="audit-data-value">${escHtml(data.escopo)}</div></div>` : ""}
+        <div class="audit-data-item"><div class="audit-data-label">Nome da Organização</div><div class="audit-data-value">${escHtml(data.empresa)}</div></div>
+        <div class="audit-data-item"><div class="audit-data-label">Grupo / Filiais</div><div class="audit-data-value">${escHtml(data.filiais ?? data.unidade ?? "—")}</div></div>
+        <div class="audit-data-item"><div class="audit-data-label">Endereço</div><div class="audit-data-value">${escHtml(data.endereco ?? "—")}</div></div>
+        <div class="audit-data-item"><div class="audit-data-label">Município / Estado</div><div class="audit-data-value">${escHtml(data.municipioUf ?? "—")}</div></div>
+        <div class="audit-data-item"><div class="audit-data-label">Telefone</div><div class="audit-data-value">${escHtml(data.telefone ?? "—")}</div></div>
+        <div class="audit-data-item"><div class="audit-data-label">E-mail</div><div class="audit-data-value">${escHtml(data.email ?? "—")}</div></div>
       </div>
     </div>
+
+    <!-- INFORMAÇÕES DA AUDITORIA -->
+    <div class="section">
+      <div class="section-title">Informações da Auditoria</div>
+      <div class="audit-data">
+        <div class="audit-data-item" style="grid-column:1/-1;border-right:none"><div class="audit-data-label">Descrição do Escopo</div><div class="audit-data-value">${escHtml(data.escopo ?? "Todo o site")}</div></div>
+        <div class="audit-data-item" style="grid-column:1/-1;border-right:none"><div class="audit-data-label">Norma de Referência</div><div class="audit-data-value">${escHtml(data.norma)}</div></div>
+        <div class="audit-data-item"><div class="audit-data-label">Auditor Líder</div><div class="audit-data-value">${escHtml(data.auditorLider)}</div></div>
+        <div class="audit-data-item"><div class="audit-data-label">Auditor (equipe)</div><div class="audit-data-value">${data.equipeAuditora && data.equipeAuditora.length > 0 ? data.equipeAuditora.map(escHtml).join(", ") : "N/A"}</div></div>
+        <div class="audit-data-item"><div class="audit-data-label">Especialista / Observador</div><div class="audit-data-value">${escHtml(data.especialistaObservador ?? "N/A")}</div></div>
+        <div class="audit-data-item"><div class="audit-data-label">Turnos de Trabalho</div><div class="audit-data-value">${escHtml(data.turnosTrabalho ?? "Administrativo")}</div></div>
+        <div class="audit-data-item"><div class="audit-data-label">Nº de Funcionários</div><div class="audit-data-value">${escHtml(data.numFuncionarios ?? "—")}</div></div>
+        <div class="audit-data-item"><div class="audit-data-label">Contato</div><div class="audit-data-value">${escHtml(data.contato ?? "—")}</div></div>
+        <div class="audit-data-item"><div class="audit-data-label">Tipo</div><div class="audit-data-value">${auditTipoLabel(data.tipo)}</div></div>
+        <div class="audit-data-item"><div class="audit-data-label">Data da Auditoria</div><div class="audit-data-value">${formatDate(data.dataAuditoria)}</div></div>
+        <div class="audit-data-item"><div class="audit-data-label">Certificações Existentes</div><div class="audit-data-value">${escHtml(data.certificacoesExistentes ?? "—")}</div></div>
+        <div class="audit-data-item"><div class="audit-data-label">Aplicabilidade (exclusões)</div><div class="audit-data-value">N/A</div></div>
+      </div>
+    </div>
+
+    <!-- INFORMAÇÕES DA ORGANIZAÇÃO -->
+    <div class="section">
+      <div class="section-title">Informações da Organização</div>
+      <div class="audit-data">
+        <div class="audit-data-item"><div class="audit-data-label">Principais Clientes</div><div class="audit-data-value">${escHtml(data.principaisClientes ?? "Diversos")}</div></div>
+        <div class="audit-data-item"><div class="audit-data-label">Principais Fornecedores</div><div class="audit-data-value">${escHtml(data.principaisFornecedores ?? "Diversos")}</div></div>
+        <div class="audit-data-item" style="grid-column:1/-1;border-right:none"><div class="audit-data-label">Principais Produtos / Serviços</div><div class="audit-data-value">${escHtml(data.principaisProdutosServicos ?? "—")}</div></div>
+      </div>
+    </div>
+
+    <!-- HISTÓRICO DE AUDITORIAS -->
+    ${data.historicoAuditorias && data.historicoAuditorias.length > 0 ? `
+    <div class="section">
+      <div class="section-title">1. Histórico de Auditorias</div>
+      <table>
+        <thead><tr><th>Tipo</th><th>Auditor / Data</th><th>Ocorrências</th></tr></thead>
+        <tbody>${data.historicoAuditorias.map((h) => `
+          <tr><td>${escHtml(h.tipo)}</td><td>${escHtml(h.auditorData)}</td><td>${escHtml(h.ocorrencias)}</td></tr>
+        `).join("")}</tbody>
+      </table>
+    </div>` : ""}
+
+    <!-- LISTA DE AUDITADOS -->
+    ${data.listaAuditados && data.listaAuditados.length > 0 ? `
+    <div class="section">
+      <div class="section-title">2. Lista de Auditados</div>
+      <table>
+        <thead><tr><th>Nome</th><th>Área / Processo</th><th>Data</th></tr></thead>
+        <tbody>${data.listaAuditados.map((a) => `
+          <tr><td>${escHtml(a.nome)}</td><td>${escHtml(a.areaProcesso)}</td><td>${escHtml(a.data)}</td></tr>
+        `).join("")}</tbody>
+      </table>
+    </div>` : ""}
+
+    <!-- DETALHE DAS OCORRÊNCIAS (formato FORM 9.2-01) -->
+    ${findings.length > 0 ? `
+    <div class="section">
+      <div class="section-title">3. Detalhe das Ocorrências</div>
+      <table>
+        <thead><tr><th>Processo</th><th>Descrição</th><th>Requisito</th><th>Tipo</th></tr></thead>
+        <tbody>${findings.filter((f) => f.tipo !== "conformidade").map((f) => {
+          const symbol = f.tipo === "nc-maior" || f.tipo === "nc-menor" ? "&#x232B; NC" : f.tipo === "observacao" ? "&#x270D; OBS" : "&#x261C; OM";
+          return `<tr><td>${escHtml(f.clausula)}</td><td>${escHtml(f.descricao.substring(0, 150))}${f.descricao.length > 150 ? "..." : ""}</td><td>${escHtml(f.clausula)}</td><td>${symbol}</td></tr>`;
+        }).join("")}</tbody>
+      </table>
+      <div style="font-size:9px;color:#6B7280;margin-top:6px">Classificação: &#x232B; — Não Conformidade; &#x270D; — Observação; &#x261C; — Oportunidade de melhoria.</div>
+    </div>` : ""}
 
     <!-- RESUMO EXECUTIVO -->
     <div class="section">
@@ -1040,10 +1126,17 @@ export function buildFullAuditReportHtml(data: FullAuditReportData): string {
       <div style="text-align:center; margin-top:16px;"><div class="signature-date">${escHtml(data.unidade ?? data.empresa)}, ${formatDate(data.dataAuditoria)}</div></div>
     </div>
 
+    <!-- QUALIFICAÇÃO DO AUDITOR -->
+    ${data.qualificacaoAuditor ? `
+    <div class="section">
+      <div class="section-title">Qualificação do Auditor</div>
+      <div class="analysis-box">${escHtml(data.qualificacaoAuditor).replace(/\n/g, "<br/>")}</div>
+    </div>` : ""}
+
     <!-- RODAPÉ -->
     <div class="report-footer">
       <div class="footer-brand">CERTIFICA — Plataforma de Gestão de Compliance e Auditorias ISO</div>
-      <div class="footer-conf">Relatório de Auditoria — Documento Confidencial</div>
+      <div class="footer-conf">FORM 9.2-01${data.revisaoForm ? ` Rev. ${escHtml(data.revisaoForm)}` : ""} — Relatório de Auditoria Interna — Documento Confidencial</div>
     </div>
 
   </div>

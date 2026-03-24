@@ -22,6 +22,8 @@ import TreinamentosPage from "./pages/TreinamentosPage";
 import CalendarioPage from "./pages/CalendarioPage";
 import ClientePerfilPage from "./pages/ClientePerfilPage";
 import ContatoPerfilPage from "./pages/ContatoPerfilPage";
+import ChatbotConfigPage from "./pages/ChatbotConfigPage";
+import ConsultoresPage from "./pages/ConsultoresPage";
 
 export const router = createBrowserRouter([
   // Public route — no layout
@@ -35,6 +37,7 @@ export const router = createBrowserRouter([
       { index: true, Component: DashboardPage },
       { path: "reunioes", Component: ReunioesPage },
       { path: "chat", Component: ChatPage },
+      { path: "chatbot", Component: ChatbotConfigPage },
 
       { path: "clientes", Component: ClientesPage },
       { path: "clientes/:id", Component: ClientePerfilPage },
@@ -49,6 +52,7 @@ export const router = createBrowserRouter([
       { path: "calendario", Component: CalendarioPage },
       { path: "normas", Component: NormasPage },
       { path: "treinamentos", Component: TreinamentosPage },
+      { path: "consultores", Component: ConsultoresPage },
 
       { path: "relatorios", Component: RelatoriosPage },
       { path: "configuracoes", Component: ConfiguracoesPage },

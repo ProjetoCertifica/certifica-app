@@ -78,10 +78,9 @@ export interface DashboardFilters {
 export interface KPIs {
   ativos: number;
   atrasos: number;
-  ncs: number;
   auditorias: number;
-  docs: number;
-  conformidade: number;
+  consultorias: number;
+  treinamentos: number;
   risco: number;
 }
 
@@ -331,6 +330,14 @@ export function useDashboard(filters: DashboardFilters) {
     });
   }, [documents, filters]);
 
+  const filteredTrainings = useMemo(() => {
+    return trainings.filter((t) => {
+      if (filters.norma !== "todas" && t.norma !== filters.norma) return false;
+      if (periodDate && t.data_inicio && t.data_inicio < periodDate) return false;
+      return true;
+    });
+  }, [trainings, filters, periodDate]);
+
   /* ── KPIs ── */
   const kpis: KPIs = useMemo(() => {
     const now = new Date();
@@ -339,12 +346,9 @@ export function useDashboard(filters: DashboardFilters) {
       if (!p.previsao) return false;
       return new Date(p.previsao) < now && p.status !== "concluido" && p.status !== "cancelado";
     }).length;
-    const ncs = filteredAudits.reduce((s, a) => s + a.ncs_count, 0);
     const auditCount = filteredAudits.filter((a) => a.status !== "cancelada").length;
-    const docsPendentes = filteredDocuments.filter((d) => d.status === "rascunho" || d.status === "em-revisao").length;
-
-    const totalFindings = filteredAudits.reduce((s, a) => s + a.findings_count, 0);
-    const conformidade = totalFindings > 0 ? Math.round(((totalFindings - ncs) / totalFindings) * 100) : 100;
+    const consultoriasCount = filteredProjects.filter((p) => p.status === "em-andamento").length;
+    const treinamentosCount = filteredTrainings.filter((t) => t.status !== "cancelado").length;
 
     const risco = filteredProjects.length > 0
       ? Math.round(
@@ -359,8 +363,8 @@ export function useDashboard(filters: DashboardFilters) {
         )
       : 0;
 
-    return { ativos, atrasos, ncs, auditorias: auditCount, docs: docsPendentes, conformidade, risco };
-  }, [filteredProjects, filteredAudits, filteredDocuments]);
+    return { ativos, atrasos, auditorias: auditCount, consultorias: consultoriasCount, treinamentos: treinamentosCount, risco };
+  }, [filteredProjects, filteredAudits, filteredTrainings]);
 
   /* ── Previous period KPIs for comparison ── */
   const prevKpis: KPIs = useMemo(() => {
@@ -370,21 +374,18 @@ export function useDashboard(filters: DashboardFilters) {
       if (!p.previsao) return false;
       return new Date(p.previsao) < now && p.status !== "concluido" && p.status !== "cancelado";
     }).length;
-    const ncs = audits.reduce((s, a) => s + a.ncs_count, 0);
     const auditCount = audits.filter((a) => a.status !== "cancelada").length;
-    const docsPendentes = documents.filter((d) => d.status === "rascunho" || d.status === "em-revisao").length;
-    const totalFindings = audits.reduce((s, a) => s + a.findings_count, 0);
-    const conformidade = totalFindings > 0 ? Math.round(((totalFindings - ncs) / totalFindings) * 100) : 100;
-    return { ativos, atrasos, ncs, auditorias: auditCount, docs: docsPendentes, conformidade, risco: 0 };
-  }, [prevProjects, audits, documents, periodDate]);
+    const consultoriasCount = prevProjects.filter((p) => p.status === "em-andamento").length;
+    const treinamentosCount = filteredTrainings.filter((t) => t.status !== "cancelado").length;
+    return { ativos, atrasos, auditorias: auditCount, consultorias: consultoriasCount, treinamentos: treinamentosCount, risco: 0 };
+  }, [prevProjects, audits, filteredTrainings, periodDate]);
 
   const monthCompare: Record<keyof KPIs, MonthCompare> = useMemo(() => ({
     ativos: { current: kpis.ativos, previous: prevKpis.ativos },
     atrasos: { current: kpis.atrasos, previous: prevKpis.atrasos },
-    ncs: { current: kpis.ncs, previous: prevKpis.ncs },
     auditorias: { current: kpis.auditorias, previous: prevKpis.auditorias },
-    docs: { current: kpis.docs, previous: prevKpis.docs },
-    conformidade: { current: kpis.conformidade, previous: prevKpis.conformidade, suffix: "%" },
+    consultorias: { current: kpis.consultorias, previous: prevKpis.consultorias },
+    treinamentos: { current: kpis.treinamentos, previous: prevKpis.treinamentos },
     risco: { current: kpis.risco, previous: prevKpis.risco },
   }), [kpis, prevKpis]);
 
@@ -443,9 +444,9 @@ export function useDashboard(filters: DashboardFilters) {
 
   /* ── Executive data ── */
   const executiveByConsultor = useMemo(() => {
-    const map = new Map<string, { consultor: string; projetos: number; risco: number; conformidade: number; ncs: number }>();
+    const map = new Map<string, { consultor: string; projetos: number; risco: number; treinamentos: number; auditorias: number }>();
     filteredProjects.forEach((p) => {
-      const c = map.get(p.consultor) ?? { consultor: p.consultor, projetos: 0, risco: 0, conformidade: 0, ncs: 0 };
+      const c = map.get(p.consultor) ?? { consultor: p.consultor, projetos: 0, risco: 0, treinamentos: 0, auditorias: 0 };
       c.projetos++;
       const now = new Date();
       if (p.previsao) {
@@ -456,7 +457,7 @@ export function useDashboard(filters: DashboardFilters) {
     });
     filteredAudits.forEach((a) => {
       const c = map.get(a.auditor);
-      if (c) c.ncs += a.ncs_count;
+      if (c) c.auditorias++;
     });
     return Array.from(map.values())
       .map((r) => ({
@@ -467,18 +468,20 @@ export function useDashboard(filters: DashboardFilters) {
   }, [filteredProjects, filteredAudits]);
 
   const executiveByNorma = useMemo(() => {
-    const map = new Map<string, { norma: string; projetos: number; total: number }>();
+    const map = new Map<string, { norma: string; projetos: number; auditorias: number }>();
     filteredProjects.forEach((p) => {
       const key = p.norma.replace(/:20\d{2}/, "");
-      const c = map.get(key) ?? { norma: key, projetos: 0, total: 0 };
+      const c = map.get(key) ?? { norma: key, projetos: 0, auditorias: 0 };
       c.projetos++;
       map.set(key, c);
     });
-    return Array.from(map.values()).map((r) => ({
-      ...r,
-      conformidade: kpis.conformidade,
-    }));
-  }, [filteredProjects, kpis.conformidade]);
+    filteredAudits.forEach((a) => {
+      const key = a.norma.replace(/:20\d{2}/, "");
+      const c = map.get(key);
+      if (c) c.auditorias++;
+    });
+    return Array.from(map.values());
+  }, [filteredProjects, filteredAudits]);
 
   const refetch = useCallback(() => {
     cache.clear();
@@ -491,7 +494,7 @@ export function useDashboard(filters: DashboardFilters) {
     audits: filteredAudits,
     documents: filteredDocuments,
     meetings,
-    trainings,
+    trainings: filteredTrainings,
     loading,
     error,
     kpis,

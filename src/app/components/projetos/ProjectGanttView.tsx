@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback, useMemo } from "react";
+import { useRef, useState, useCallback, useMemo, useEffect } from "react";
 import type { ProjetoUI } from "../../lib/projetosShared";
 import { faseColors, statusConfig, parseBrDate, getProgressPercent } from "../../lib/projetosShared";
 
@@ -150,24 +150,41 @@ export function ProjectGanttView({ projetos, onSelect }: ProjectGanttViewProps) 
   const today = startOfDay(new Date());
   const todayOffset = daysBetween(rangeStart, today) * PIXELS_PER_DAY;
 
-  /* ── Generate month labels ── */
+  /* Scroll timeline to center on today's date after initial render */
+  useEffect(() => {
+    const el = timelineRef.current;
+    if (!el) return;
+    // Use requestAnimationFrame to ensure the DOM has been laid out
+    requestAnimationFrame(() => {
+      const containerWidth = el.clientWidth;
+      const scrollTarget = Math.max(0, todayOffset - containerWidth / 2);
+      el.scrollLeft = scrollTarget;
+      // Also sync the header
+      const header = el.previousElementSibling;
+      if (header) {
+        const inner = header.firstElementChild as HTMLElement;
+        if (inner) inner.style.transform = `translateX(-${scrollTarget}px)`;
+      }
+    });
+  }, [todayOffset]);
+
+  /* ── Generate week labels (Sem 1, Sem 2...) with day count ── */
   const monthLabels = useMemo(() => {
     const labels: Array<{ label: string; left: number; width: number }> = [];
-    let cursor = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1);
+    const weekDays = 7;
+    const totalWeeks = Math.ceil(totalDays / weekDays);
 
-    while (cursor <= rangeEnd) {
-      const monthStart = cursor < rangeStart ? rangeStart : new Date(cursor);
-      const nextMonth = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
-      const monthEnd = nextMonth > rangeEnd ? rangeEnd : addDays(nextMonth, -1);
-
-      const left = daysBetween(rangeStart, monthStart) * PIXELS_PER_DAY;
-      const width = (daysBetween(monthStart, monthEnd) + 1) * PIXELS_PER_DAY;
-
-      labels.push({ label: formatMonthYear(monthStart), left, width });
-      cursor = nextMonth;
+    for (let w = 0; w < totalWeeks; w++) {
+      const startDay = w * weekDays;
+      const endDay = Math.min(startDay + weekDays, totalDays);
+      const left = startDay * PIXELS_PER_DAY;
+      const width = (endDay - startDay) * PIXELS_PER_DAY;
+      const weekDate = addDays(rangeStart, startDay);
+      const dateLabel = weekDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+      labels.push({ label: `Sem ${w + 1} · ${dateLabel}`, left, width });
     }
     return labels;
-  }, [rangeStart, rangeEnd]);
+  }, [rangeStart, totalDays]);
 
   /* ── Generate grid lines (week boundaries) ── */
   const gridLines = useMemo(() => {
@@ -441,7 +458,7 @@ export function ProjectGanttView({ projetos, onSelect }: ProjectGanttViewProps) 
                         textShadow: progress > 50 ? "0 1px 2px rgba(0,0,0,0.2)" : "none",
                       }}
                     >
-                      {p.codigo}
+                      {p.codigo} · {barDays}d
                     </span>
                   )}
                 </div>
@@ -469,7 +486,12 @@ export function ProjectGanttView({ projetos, onSelect }: ProjectGanttViewProps) 
                 {tooltip.projeto.titulo}
               </div>
               <div className="opacity-70">
-                {tooltip.projeto.inicio} → {tooltip.projeto.previsao}
+                {(() => {
+                  const s = parseBrDate(tooltip.projeto.inicio);
+                  const e = parseBrDate(tooltip.projeto.previsao);
+                  const dias = s && e ? daysBetween(s, e) + 1 : 0;
+                  return `${tooltip.projeto.inicio} → ${tooltip.projeto.previsao} (${dias} dias)`;
+                })()}
               </div>
               <div className="mt-1 flex items-center gap-1.5">
                 <div

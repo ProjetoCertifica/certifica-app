@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import {
@@ -13,10 +13,27 @@ import {
   CheckCircle2,
   Bot,
   AlertTriangle,
+  Briefcase,
+  ClipboardCheck,
+  GraduationCap,
+  Filter,
 } from "lucide-react";
 import { useGoogleCalendar, type CalendarMeeting } from "../lib/useGoogleCalendar";
 import { supabase } from "../lib/supabase";
 import { DSButton } from "../components/ds/DSButton";
+import { DSBadge } from "../components/ds/DSBadge";
+
+/* ── Types for consolidated agenda ── */
+interface ConsultorEvent {
+  id: string;
+  tipo: "projeto" | "auditoria" | "treinamento";
+  titulo: string;
+  cliente: string;
+  consultor: string;
+  data_inicio: string | null;
+  data_fim: string | null;
+  status: string;
+}
 
 /* ── Calendar helpers ── */
 const MONTH_NAMES = [
@@ -59,6 +76,117 @@ export default function CalendarioPage() {
   const [schedulingBot, setSchedulingBot] = useState(false);
   // Track locally-scheduled bot IDs so UI updates immediately without re-fetch
   const [localBots, setLocalBots] = useState<Set<string>>(new Set());
+
+  /* ── Consolidated consultant agenda ── */
+  const [agendaMode, setAgendaMode] = useState<"calendario" | "consultores">("calendario");
+  const [consultorEvents, setConsultorEvents] = useState<ConsultorEvent[]>([]);
+  const [consultorFilter, setConsultorFilter] = useState("todos");
+  const [agendaLoading, setAgendaLoading] = useState(false);
+
+  const fetchConsultorAgenda = useCallback(async () => {
+    setAgendaLoading(true);
+    try {
+      const [projRes, auditRes, trainRes] = await Promise.allSettled([
+        supabase.from("projetos").select("id, titulo, consultor, equipe, inicio, previsao, status, clientes(nome_fantasia)").in("status", ["em-andamento", "proposta"]),
+        supabase.from("audits").select("id, codigo, auditor, data_inicio, data_fim, status, norma, clientes(nome_fantasia)").in("status", ["planejada", "em-andamento"]),
+        supabase.from("trainings").select("id, titulo, instrutor, data_inicio, status").in("status", ["agendado", "em-andamento"]),
+      ]);
+
+      const events: ConsultorEvent[] = [];
+
+      if (projRes.status === "fulfilled" && projRes.value.data) {
+        for (const p of projRes.value.data as any[]) {
+          events.push({
+            id: p.id,
+            tipo: "projeto",
+            titulo: p.titulo,
+            cliente: p.clientes?.nome_fantasia ?? "—",
+            consultor: p.consultor,
+            data_inicio: p.inicio,
+            data_fim: p.previsao,
+            status: p.status,
+          });
+          // Also add team members as separate entries
+          if (Array.isArray(p.equipe)) {
+            for (const member of p.equipe) {
+              if (member && member !== p.consultor) {
+                events.push({
+                  id: `${p.id}-${member}`,
+                  tipo: "projeto",
+                  titulo: p.titulo,
+                  cliente: p.clientes?.nome_fantasia ?? "—",
+                  consultor: member,
+                  data_inicio: p.inicio,
+                  data_fim: p.previsao,
+                  status: p.status,
+                });
+              }
+            }
+          }
+        }
+      }
+
+      if (auditRes.status === "fulfilled" && auditRes.value.data) {
+        for (const a of auditRes.value.data as any[]) {
+          events.push({
+            id: a.id,
+            tipo: "auditoria",
+            titulo: `${a.codigo} — ${a.norma}`,
+            cliente: a.clientes?.nome_fantasia ?? "—",
+            consultor: a.auditor,
+            data_inicio: a.data_inicio,
+            data_fim: a.data_fim,
+            status: a.status,
+          });
+        }
+      }
+
+      if (trainRes.status === "fulfilled" && trainRes.value.data) {
+        for (const t of trainRes.value.data as any[]) {
+          events.push({
+            id: t.id,
+            tipo: "treinamento",
+            titulo: t.titulo,
+            cliente: "—",
+            consultor: t.instrutor,
+            data_inicio: t.data_inicio,
+            data_fim: null,
+            status: t.status,
+          });
+        }
+      }
+
+      setConsultorEvents(events);
+    } catch {
+      toast.error("Erro ao carregar agenda dos consultores");
+    } finally {
+      setAgendaLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (agendaMode === "consultores") fetchConsultorAgenda();
+  }, [agendaMode, fetchConsultorAgenda]);
+
+  const allConsultores = useMemo(() => {
+    const set = new Set(consultorEvents.map((e) => e.consultor).filter(Boolean));
+    return ["todos", ...Array.from(set).sort()];
+  }, [consultorEvents]);
+
+  const filteredEvents = useMemo(() => {
+    if (consultorFilter === "todos") return consultorEvents;
+    return consultorEvents.filter((e) => e.consultor === consultorFilter);
+  }, [consultorEvents, consultorFilter]);
+
+  const eventsByConsultor = useMemo(() => {
+    const map = new Map<string, ConsultorEvent[]>();
+    for (const e of filteredEvents) {
+      const key = e.consultor || "Sem consultor";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(e);
+    }
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [filteredEvents]);
 
   // Lê tokens do URL após callback OAuth (/calendario?google_tokens=...)
   useEffect(() => {
@@ -227,10 +355,108 @@ export default function CalendarioPage() {
     d.getMonth() === today.getMonth() &&
     d.getDate() === today.getDate();
 
+  /* ── Consultores agenda view ── */
+  if (agendaMode === "consultores") {
+    return (
+      <div className="flex flex-col h-full p-6">
+        {/* Tabs */}
+        <div className="flex items-center gap-4 mb-5 flex-shrink-0">
+          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+            <button onClick={() => setAgendaMode("calendario")} className="px-3 py-1.5 text-xs font-medium rounded-md text-slate-500 hover:text-slate-700 transition-colors">
+              Calendário
+            </button>
+            <button className="px-3 py-1.5 text-xs font-medium rounded-md bg-white text-certifica-700 shadow-sm">
+              Agenda Consultores
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 ml-auto">
+            <Filter className="w-3.5 h-3.5 text-slate-400" />
+            <select
+              value={consultorFilter}
+              onChange={(e) => setConsultorFilter(e.target.value)}
+              className="h-8 px-2 border border-slate-200 rounded-lg text-xs"
+            >
+              {allConsultores.map((c) => (
+                <option key={c} value={c}>{c === "todos" ? "Todos consultores" : c}</option>
+              ))}
+            </select>
+            <button
+              onClick={fetchConsultorAgenda}
+              disabled={agendaLoading}
+              className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <RefreshCw className={`w-4 h-4 ${agendaLoading ? "animate-spin" : ""}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Consultores grid */}
+        <div className="flex-1 overflow-y-auto space-y-4">
+          {agendaLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <RefreshCw className="w-5 h-5 animate-spin text-slate-400 mr-2" />
+              <span className="text-sm text-slate-400">Carregando agenda...</span>
+            </div>
+          ) : eventsByConsultor.length === 0 ? (
+            <div className="text-center py-12 text-sm text-slate-400">Nenhuma atividade encontrada</div>
+          ) : (
+            eventsByConsultor.map(([consultor, events]) => (
+              <div key={consultor} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-certifica-600 flex items-center justify-center text-white text-[10px] font-bold">
+                      {consultor.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                    </div>
+                    <span className="text-sm font-semibold text-slate-900">{consultor}</span>
+                  </div>
+                  <span className="text-xs text-slate-400">{events.length} atividade{events.length !== 1 ? "s" : ""}</span>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {events.map((evt) => (
+                    <div key={evt.id} className="px-4 py-2.5 flex items-center gap-3">
+                      <div className="flex-shrink-0">
+                        {evt.tipo === "projeto" && <Briefcase className="w-4 h-4 text-certifica-600" />}
+                        {evt.tipo === "auditoria" && <ClipboardCheck className="w-4 h-4 text-amber-600" />}
+                        {evt.tipo === "treinamento" && <GraduationCap className="w-4 h-4 text-purple-600" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium text-slate-800 truncate">{evt.titulo}</div>
+                        <div className="text-[10px] text-slate-400">
+                          {evt.cliente !== "—" ? `${evt.cliente} · ` : ""}
+                          {evt.data_inicio ? new Date(evt.data_inicio).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "Sem data"}
+                          {evt.data_fim ? ` → ${new Date(evt.data_fim).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}` : ""}
+                        </div>
+                      </div>
+                      <DSBadge variant={evt.status === "em-andamento" ? "oportunidade" : "outline"}>{evt.status}</DSBadge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  }
+
   /* ── Not connected ── */
   if (!cal.connected) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex flex-col items-center p-8">
+        {/* Tab to switch to consultant agenda */}
+        <div className="w-full max-w-sm mb-6 flex justify-center">
+          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+            <button className="px-3 py-1.5 text-xs font-medium rounded-md bg-white text-certifica-700 shadow-sm">
+              Calendário
+            </button>
+            <button onClick={() => setAgendaMode("consultores")} className="px-3 py-1.5 text-xs font-medium rounded-md text-slate-500 hover:text-slate-700 transition-colors">
+              Agenda Consultores
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 flex items-center justify-center">
         <div className="text-center max-w-sm">
           <div className="w-20 h-20 rounded-2xl bg-certifica-50 border border-certifica-100 flex items-center justify-center mx-auto mb-6">
             <CalendarDays className="w-10 h-10 text-certifica-600" />
@@ -267,6 +493,7 @@ export default function CalendarioPage() {
             Conectar Google Calendar
           </DSButton>
         </div>
+        </div>
       </div>
     );
   }
@@ -276,24 +503,35 @@ export default function CalendarioPage() {
     <div className="flex h-full min-h-0">
       {/* ── Calendar panel ── */}
       <div className="flex-1 flex flex-col min-w-0 p-6 overflow-hidden">
-        {/* Month navigation header */}
+        {/* Tabs + Month navigation header */}
         <div className="flex items-center justify-between mb-5 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={prevMonth}
-              className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <h2 className="text-lg font-semibold text-slate-900 min-w-[180px] text-center">
-              {MONTH_NAMES[month]} {year}
-            </h2>
-            <button
-              onClick={nextMonth}
-              className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+              <button className="px-3 py-1.5 text-xs font-medium rounded-md bg-white text-certifica-700 shadow-sm">
+                Calendário
+              </button>
+              <button onClick={() => setAgendaMode("consultores")} className="px-3 py-1.5 text-xs font-medium rounded-md text-slate-500 hover:text-slate-700 transition-colors">
+                Agenda Consultores
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={prevMonth}
+                className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <h2 className="text-lg font-semibold text-slate-900 min-w-[180px] text-center">
+                {MONTH_NAMES[month]} {year}
+              </h2>
+              <button
+                onClick={nextMonth}
+                className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center gap-1.5">

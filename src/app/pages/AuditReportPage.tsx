@@ -116,7 +116,7 @@ const normOptions: { value: NormCode; label: string }[] = [
   { value: "iso45001", label: "ISO 45001:2018 - SSO" },
   { value: "iso50001", label: "ISO 50001:2018 - Energia" },
   { value: "iso22000", label: "ISO 22000:2018 - Alimentos" },
-  { value: "fsc", label: "FSC COC - Cadeia de Custodia" },
+  { value: "fsc", label: "FSC COC - Cadeia de Custódia" },
 ];
 
 const clauseLibrary: Record<NormCode, ClauseOption[]> = {
@@ -124,62 +124,62 @@ const clauseLibrary: Record<NormCode, ClauseOption[]> = {
     {
       clause: "6.1.1",
       title: "Riscos e oportunidades",
-      text: "A organizacao deve determinar riscos e oportunidades que precisam ser abordados para assegurar que o sistema alcance os resultados pretendidos.",
+      text: "A organização deve determinar riscos e oportunidades que precisam ser abordados para assegurar que o sistema alcance os resultados pretendidos.",
     },
     {
       clause: "7.1.5",
-      title: "Recursos de monitoramento e medicao",
-      text: "A organizacao deve assegurar recursos adequados e calibrados quando monitoramento e medicao forem usados para verificar conformidade.",
+      title: "Recursos de monitoramento e medição",
+      text: "A organização deve assegurar recursos adequados e calibrados quando monitoramento e medição forem usados para verificar conformidade.",
     },
     {
       clause: "10.2",
-      title: "Nao conformidade e acao corretiva",
-      text: "Quando ocorrer uma nao conformidade, a organizacao deve reagir, controlar e corrigir, avaliar causa e implementar acao corretiva.",
+      title: "Não conformidade e ação corretiva",
+      text: "Quando ocorrer uma não conformidade, a organização deve reagir, controlar e corrigir, avaliar causa e implementar ação corretiva.",
     },
   ],
   iso14001: [
     {
       clause: "6.1.2",
       title: "Aspectos ambientais",
-      text: "A organizacao deve determinar aspectos ambientais e impactos associados considerando perspectiva de ciclo de vida.",
+      text: "A organização deve determinar aspectos ambientais e impactos associados considerando perspectiva de ciclo de vida.",
     },
     {
       clause: "8.1",
       title: "Planejamento e controle operacional",
-      text: "A organizacao deve estabelecer, implementar e manter processos necessarios para atender requisitos do SGA.",
+      text: "A organização deve estabelecer, implementar e manter processos necessários para atender requisitos do SGA.",
     },
   ],
   iso45001: [
     {
       clause: "7.3",
-      title: "Conscientizacao",
-      text: "Trabalhadores devem estar conscientes da politica de SSO, riscos, perigos e consequencias de nao conformidade.",
+      title: "Conscientização",
+      text: "Trabalhadores devem estar conscientes da política de SSO, riscos, perigos e consequências de não conformidade.",
     },
     {
       clause: "8.1.2",
-      title: "Eliminacao de perigos",
-      text: "A organizacao deve estabelecer processo para eliminacao de perigos e reducao de riscos de SSO.",
+      title: "Eliminação de perigos",
+      text: "A organização deve estabelecer processo para eliminação de perigos e redução de riscos de SSO.",
     },
   ],
   iso50001: [
     {
       clause: "6.3",
-      title: "Indicadores de desempenho energetico",
-      text: "A organizacao deve determinar EnPI apropriados para monitorar e demonstrar melhoria de desempenho energetico.",
+      title: "Indicadores de desempenho energético",
+      text: "A organização deve determinar EnPI apropriados para monitorar e demonstrar melhoria de desempenho energético.",
     },
   ],
   iso22000: [
     {
       clause: "8.5.2",
-      title: "Programa de pre-requisitos operacionais",
-      text: "A organizacao deve estabelecer e manter programas para prevenir contaminacao e assegurar seguranca dos alimentos.",
+      title: "Programa de pré-requisitos operacionais",
+      text: "A organização deve estabelecer e manter programas para prevenir contaminação e assegurar segurança dos alimentos.",
     },
   ],
   fsc: [
     {
       clause: "COC 2.1",
       title: "Controle de material",
-      text: "A organizacao deve implementar controles para rastreabilidade e segregacao de material certificado em toda a cadeia interna.",
+      text: "A organização deve implementar controles para rastreabilidade e segregação de material certificado em toda a cadeia interna.",
     },
   ],
 };
@@ -188,7 +188,7 @@ const workflowFlow: WorkflowStatus[] = ["rascunho", "revisao-tecnica", "aprovado
 
 const workflowLabel: Record<WorkflowStatus, string> = {
   rascunho: "Rascunho",
-  "revisao-tecnica": "Revisao tecnica",
+  "revisao-tecnica": "Revisão técnica",
   aprovado: "Aprovado",
   "enviado-cliente": "Enviado ao cliente",
 };
@@ -202,8 +202,8 @@ function nowBr() {
 function statusBadge(status: EvidenceStatus): { label: string; variant: "conformidade" | "nao-conformidade" | "observacao" | "oportunidade" | "outline" } {
   const map = {
     conforme: { label: "Conforme", variant: "conformidade" as const },
-    "nao-conformidade": { label: "Nao conformidade", variant: "nao-conformidade" as const },
-    observacao: { label: "Observacao", variant: "observacao" as const },
+    "nao-conformidade": { label: "Não conformidade", variant: "nao-conformidade" as const },
+    observacao: { label: "Observação", variant: "observacao" as const },
     oportunidade: { label: "Oportunidade", variant: "oportunidade" as const },
     pendente: { label: "Pendente", variant: "outline" as const },
   };
@@ -595,13 +595,13 @@ export default function AuditReportPage() {
     }
     const base =
       classificacao === "nao-conformidade"
-        ? "Abrir acao corretiva imediata com analise de causa, plano 5W2H e verificacao de eficacia."
+        ? "Abrir ação corretiva imediata com análise de causa, plano 5W2H e verificação de eficácia."
         : classificacao === "observacao"
-          ? "Registrar acao preventiva com responsavel e checkpoint no proximo ciclo de auditoria."
+          ? "Registrar ação preventiva com responsável e checkpoint no próximo ciclo de auditoria."
           : classificacao === "oportunidade"
-            ? "Planejar melhoria gradual com piloto e medicao de resultado para padronizacao."
-            : "Manter controle atual e reforcar evidencia em auditorias subsequentes.";
-    const newRec = `${base} Prazo sugerido: ${prazo}. Responsavel: ${responsavel || "a definir"}.`;
+            ? "Planejar melhoria gradual com piloto e medição de resultado para padronização."
+            : "Manter controle atual e reforçar evidência em auditorias subsequentes.";
+    const newRec = `${base} Prazo sugerido: ${prazo}. Responsável: ${responsavel || "a definir"}.`;
     setRecomendacao(newRec);
     setFindingForm((prev) => ({ ...prev, recomendacao_auditor: newRec }));
   };
@@ -780,9 +780,10 @@ export default function AuditReportPage() {
       aprovadoPor: matchedAudit?.rai_report?.aprovado_por ?? "",
       conclusao: conclusaoAuditoria,
       parecerFinal: parecerFinal || undefined,
+      revisaoForm: "07",
     };
     exportFullAuditReport(reportData);
-    addRevision("Relatório completo exportado (Modelo Schott)");
+    addRevision("Relatório completo exportado (FORM 9.2-01)");
     setLastExport(nowBr());
     toast.success("Relatório completo gerado! Use Ctrl+P para salvar como PDF.");
   };
@@ -795,10 +796,10 @@ export default function AuditReportPage() {
       `Auditor: ${auditInfo.auditor}`,
       `Status workflow: ${workflowLabel[workflow]}`,
       `1) Descricao da constatacao: ${descricao}`,
-      `2) Evidencia objetiva: ${evidencia || "[DADO AUSENTE - COMPLEMENTAR]"}`,
-      `3) Requisito tecnico: ${requisito}`,
-      `4) Classificacao: ${classificacao} / Severidade: ${severidade}`,
-      `5) Recomendacao: ${recomendacao}`,
+      `2) Evidência objetiva: ${evidencia || "[DADO AUSENTE - COMPLEMENTAR]"}`,
+      `3) Requisito técnico: ${requisito}`,
+      `4) Classificação: ${classificacao} / Severidade: ${severidade}`,
+      `5) Recomendação: ${recomendacao}`,
       "",
       "Assinatura tecnica digital: Carlos M. Silva",
       "Rodape tecnico: Certifica Consultoria | Rastreabilidade RAI | Versao controlada",
@@ -815,7 +816,7 @@ export default function AuditReportPage() {
       <aside className="w-full lg:w-[300px] lg:flex-shrink-0 border-b lg:border-b-0 lg:border-r border-certifica-200 bg-white flex flex-col max-h-[240px] lg:max-h-none">
         <div className="px-4 py-3 border-b border-certifica-200">
           <div className="text-[11px] tracking-[0.06em] uppercase text-certifica-500 mb-2" style={{ fontWeight: 600 }}>
-            Evidencias RAI
+            Evidências RAI
           </div>
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-certifica-500/50" strokeWidth={1.5} />
@@ -891,7 +892,7 @@ export default function AuditReportPage() {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-[12px] text-certifica-700 font-mono" style={{ fontWeight: 600 }}>
-                  {selected?.id}
+                  {selected?.id?.startsWith("EV-") ? selected.id : `RAI-${(selected?.id ?? "").slice(0, 8)}`}
                 </span>
                 <ChevronRight className="w-3 h-3 text-certifica-500/60" strokeWidth={1.5} />
                 <span className="text-[12px] text-certifica-500">Fluxo RAI rastreavel</span>
@@ -960,7 +961,7 @@ export default function AuditReportPage() {
                 {generatingRai ? "Gerando…" : "Gerar Relatório"}
               </DSButton>
               <DSButton variant="primary" size="sm" icon={<Send className="w-3.5 h-3.5" strokeWidth={1.5} />} onClick={nextWorkflow}>
-                Avancar workflow
+                Avançar workflow
               </DSButton>
             </div>
           </div>
@@ -970,16 +971,16 @@ export default function AuditReportPage() {
 
             {evidenceMissing && (
               <div className="mt-3 text-[12px] text-nao-conformidade bg-nao-conformidade/5 border border-nao-conformidade/20 rounded-[4px] px-3 py-2">
-                Regra anti-vies: a analise nao pode inventar evidencia. Dados insuficientes — complemente com fato objetivo.
+                Regra anti-viés: a análise não pode inventar evidência. Dados insuficientes — complemente com fato objetivo.
               </div>
             )}
 
             <div className="flex justify-end gap-2 mt-3">
               <DSButton variant="outline" size="sm" icon={<Lightbulb className="w-3.5 h-3.5" strokeWidth={1.5} />} onClick={suggestDescriptionByAi}>
-                Sugerir descricao
+                Sugerir descrição
               </DSButton>
               <DSButton variant="outline" size="sm" icon={<Lightbulb className="w-3.5 h-3.5" strokeWidth={1.5} />} onClick={suggestRecommendationByAi}>
-                Sugerir recomendacao
+                Sugerir recomendação
               </DSButton>
             </div>
           </div>
@@ -1027,7 +1028,7 @@ export default function AuditReportPage() {
       <aside className="w-full lg:w-[290px] lg:flex-shrink-0 border-t lg:border-t-0 lg:border-l border-certifica-200 bg-white overflow-y-auto">
         <div className="px-4 py-3 border-b border-certifica-200">
           <div className="text-[10px] tracking-[0.08em] uppercase text-certifica-500 mb-2" style={{ fontWeight: 600 }}>
-            Workflow de aprovacao
+            Workflow de aprovação
           </div>
           <div className="flex items-center gap-2 mb-2">
             <Building2 className="w-3.5 h-3.5 text-certifica-700" strokeWidth={1.5} />
@@ -1051,7 +1052,7 @@ export default function AuditReportPage() {
 
         <div className="px-4 py-3 border-b border-certifica-200 space-y-2">
           <div className="text-[10px] tracking-[0.08em] uppercase text-certifica-500" style={{ fontWeight: 600 }}>
-            Validacoes tecnicas
+            Validações técnicas
           </div>
           <div className="flex items-center justify-between text-[12px]">
             <span>Clareza textual</span>
@@ -1062,20 +1063,30 @@ export default function AuditReportPage() {
             <DSBadge variant={qualityChecks.objective ? "conformidade" : "nao-conformidade"}>{qualityChecks.objective ? "OK" : "Ajustar"}</DSBadge>
           </div>
           <div className="flex items-center justify-between text-[12px]">
-            <span>Criterio de auditoria</span>
+            <span>Critério de auditoria</span>
             <DSBadge variant={qualityChecks.criteria ? "conformidade" : "nao-conformidade"}>{qualityChecks.criteria ? "OK" : "Ajustar"}</DSBadge>
           </div>
           <div className="flex items-center justify-between text-[12px]">
-            <span>Consistencia classe x severidade</span>
+            <span>Consistência classe x severidade</span>
             <DSBadge variant={severityConsistency ? "conformidade" : "nao-conformidade"}>{severityConsistency ? "Consistente" : "Inconsistente"}</DSBadge>
           </div>
+          {!severityConsistency && (
+            <div className="mt-2 text-[10.5px] text-certifica-500 bg-certifica-50 border border-certifica-200 rounded-[3px] px-2.5 py-2 leading-relaxed">
+              <span style={{ fontWeight: 600 }}>Combinações válidas:</span>
+              <ul className="mt-1 space-y-0.5 list-disc list-inside">
+                <li>NC Maior: severidade Alta ou Crítica</li>
+                <li>NC Menor: severidade Média ou Baixa</li>
+                <li>Observação: severidade Baixa</li>
+              </ul>
+            </div>
+          )}
         </div>
 
         <div className="px-4 py-3 border-b border-certifica-200">
           <div className="flex items-center gap-1.5 mb-2">
             <History className="w-3 h-3 text-certifica-500" strokeWidth={1.5} />
             <span className="text-[10px] tracking-[0.08em] uppercase text-certifica-500" style={{ fontWeight: 600 }}>
-              Versionamento por revisao
+              Versionamento por revisão
             </span>
           </div>
           <div className="space-y-2">
