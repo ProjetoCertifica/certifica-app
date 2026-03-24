@@ -93,13 +93,25 @@ export function useAiSettings() {
     const { error: err } = await supabase.from("whatsapp_ai_settings").insert({
       agent_name: name,
       agent_instructions: "Você é um assistente profissional.",
+      agent_enabled: false,
+      auto_reply: false,
       model: "gpt-4o-mini",
       temperature: 0.7,
       max_tokens: 1024,
       keywords: [],
       blacklist_phones: [],
       business_days: [1, 2, 3, 4, 5],
-      enabled: false,
+      timeout_minutes: 5,
+      business_hours_only: false,
+      business_hours_start: "08:00",
+      business_hours_end: "18:00",
+      outside_hours_message: "",
+      max_messages_per_chat: 100,
+      daily_message_limit: 200,
+      split_messages: false,
+      humanize_delay: true,
+      understand_audio: false,
+      analyze_images: false,
     } as any);
     if (err) { setError(err.message); return false; }
     await load();
