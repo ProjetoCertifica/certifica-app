@@ -240,14 +240,8 @@ export default function DashboardPage() {
         return dashboard.projects.filter((p) => p.previsao && new Date(p.previsao) < now && p.status !== "concluido" && p.status !== "cancelado");
       case "risco":
         return dashboard.projects.filter((p) => riskScore(p) >= 40);
-      case "auditorias": {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        return dashboard.audits.filter((a) => {
-          const d = a.data_inicio ? new Date(a.data_inicio) : null;
-          return !d || d >= today;
-        });
-      }
+      case "auditorias":
+        return dashboard.audits.filter((a) => a.status !== "cancelada");
       case "consultorias":
         return dashboard.projects.filter((p) => p.status === "em-andamento");
       case "treinamentos":
