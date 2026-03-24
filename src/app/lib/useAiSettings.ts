@@ -37,6 +37,7 @@ function notifyAiSettingsChanged() { window.dispatchEvent(new Event(AI_SETTINGS_
 
 export function useAiSettings() {
   const [settings, setSettings] = useState<AiSettings | null>(null);
+  const [agents, setAgents] = useState<AiSettings[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,10 +48,11 @@ export function useAiSettings() {
       const { data, error: err } = await supabase
         .from("whatsapp_ai_settings")
         .select("*")
-        .limit(1)
-        .single();
+        .order("created_at", { ascending: true });
       if (err) throw err;
-      setSettings(data as AiSettings);
+      const list = (data ?? []) as AiSettings[];
+      setAgents(list);
+      setSettings(list[0] ?? null);
     } catch (err: any) {
       setError(err.message ?? "Erro ao carregar configurações");
     } finally {
@@ -66,6 +68,11 @@ export function useAiSettings() {
     return () => window.removeEventListener(AI_SETTINGS_CHANGED, handler);
   }, [load]);
 
+  const selectAgent = useCallback((id: string) => {
+    const agent = agents.find((a) => a.id === id);
+    if (agent) setSettings(agent);
+  }, [agents]);
+
   const update = useCallback(async (patch: Partial<AiSettings>): Promise<boolean> => {
     if (!settings) return false;
     const { error: err } = await supabase
@@ -77,11 +84,38 @@ export function useAiSettings() {
       return false;
     }
     setSettings((prev) => prev ? { ...prev, ...patch } : prev);
+    setAgents((prev) => prev.map((a) => a.id === settings.id ? { ...a, ...patch } : a));
     notifyAiSettingsChanged();
     return true;
   }, [settings]);
 
-  return { settings, loading, error, reload: load, update };
+  const createAgent = useCallback(async (name: string): Promise<boolean> => {
+    const { error: err } = await supabase.from("whatsapp_ai_settings").insert({
+      agent_name: name,
+      agent_instructions: "Você é um assistente profissional.",
+      model: "gpt-4o-mini",
+      temperature: 0.7,
+      max_tokens: 1024,
+      keywords: [],
+      blacklist_phones: [],
+      business_days: [1, 2, 3, 4, 5],
+      enabled: false,
+    } as any);
+    if (err) { setError(err.message); return false; }
+    await load();
+    notifyAiSettingsChanged();
+    return true;
+  }, [load]);
+
+  const deleteAgent = useCallback(async (id: string): Promise<boolean> => {
+    const { error: err } = await supabase.from("whatsapp_ai_settings").delete().eq("id", id);
+    if (err) { setError(err.message); return false; }
+    await load();
+    notifyAiSettingsChanged();
+    return true;
+  }, [load]);
+
+  return { settings, agents, loading, error, reload: load, update, selectAgent, createAgent, deleteAgent };
 }
 
 export function useAgentPause(phone?: string) {
