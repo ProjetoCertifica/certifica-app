@@ -234,6 +234,8 @@ export default function DashboardPage() {
     if (!selectedKpi) return [];
     const now = new Date();
     switch (selectedKpi) {
+      case "ativos":
+        return dashboard.projects.filter((p) => p.status === "em-andamento" || p.status === "proposta");
       case "atrasos":
         return dashboard.projects.filter((p) => p.previsao && new Date(p.previsao) < now && p.status !== "concluido" && p.status !== "cancelado");
       case "risco":
