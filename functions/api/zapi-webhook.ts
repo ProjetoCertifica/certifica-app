@@ -378,7 +378,7 @@ async function handleAiAutoReply(
   if (messageType !== "text" || !messageBody) return;
 
   const aiSettings = await getAiSettings(supabase);
-  if (!aiSettings?.enabled || !aiSettings?.auto_reply) {
+  if (!aiSettings?.agent_enabled || !aiSettings?.auto_reply) {
     console.log("[webhook] Auto-reply desabilitado nas configurações");
     return;
   }
@@ -397,15 +397,15 @@ async function handleAiAutoReply(
     return;
   }
 
-  if (Array.isArray(aiSettings.blacklist)) {
+  if (Array.isArray(aiSettings.blacklist_phones)) {
     const norm = normalizePhone(phoneKey);
-    if (aiSettings.blacklist.some((b: string) => normalizePhone(b) === norm)) {
+    if (aiSettings.blacklist_phones.some((b: string) => normalizePhone(b) === norm)) {
       console.log(`[webhook] Telefone ${phoneKey} está na blacklist`);
       return;
     }
   }
 
-  const systemPrompt = aiSettings.system_prompt || buildDefaultSystemPrompt();
+  const systemPrompt = aiSettings.agent_instructions || buildDefaultSystemPrompt();
   const history = await getChatHistory(supabase, phoneKey, 15);
 
   const model = aiSettings.model || "gpt-4o-mini";
