@@ -64,6 +64,19 @@ export interface FaturamentoMensal {
   pago: number;
 }
 
+/** Parse valor brasileiro: "R$ 45.000,00" → 45000, "50000" → 50000 */
+function parseValorBR(valor: string | number | null | undefined): number {
+  if (typeof valor === "number") return valor;
+  if (!valor) return 0;
+  const s = String(valor).replace(/[R$\s]/g, "").trim();
+  if (!s) return 0;
+  // Se tem vírgula como decimal (formato BR): "45.000,00"
+  if (s.includes(",")) {
+    return Number(s.replace(/\./g, "").replace(",", ".")) || 0;
+  }
+  return Number(s) || 0;
+}
+
 export function useFinanceiro() {
   const [faturas, setFaturas] = useState<Faturamento[]>([]);
   const [projetos, setProjetos] = useState<{ id: string; codigo: string; titulo: string; valor: string; consultor: string; cliente_id: string; cliente_nome: string; status: string }[]>([]);
@@ -158,7 +171,7 @@ export function useFinanceiro() {
   const kpis: FinanceiroKPIs = useMemo(() => {
     const totalContratado = projetos
       .filter((p) => p.status !== "cancelado")
-      .reduce((s, p) => s + (Number(p.valor) || 0), 0);
+      .reduce((s, p) => s + (parseValorBR(p.valor) || 0), 0);
 
     const faturasDoMes = faturas.filter((f) => f.mes_competencia === mesAtual && f.status !== "cancelada");
     const faturadoMes = faturasDoMes.reduce((s, f) => s + f.valor, 0);
@@ -187,7 +200,7 @@ export function useFinanceiro() {
       if (p.status === "cancelado") continue;
       const c = map.get(p.consultor) ?? { consultor: p.consultor, totalProjetos: 0, valorContratado: 0, valorFaturado: 0, valorPago: 0, valorPendente: 0 };
       c.totalProjetos++;
-      c.valorContratado += Number(p.valor) || 0;
+      c.valorContratado += parseValorBR(p.valor) || 0;
       map.set(p.consultor, c);
     }
     for (const f of faturas) {
