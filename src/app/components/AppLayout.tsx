@@ -6,6 +6,7 @@ import {
   ClipboardCheck,
   Users,
   UserCheck,
+  DollarSign,
   FolderKanban,
   GraduationCap,
   FolderOpen,
@@ -83,6 +84,7 @@ const navItems: NavItem[] = [
 ];
 
 const bottomItems = [
+  { path: "/financeiro", label: "Financeiro", icon: DollarSign },
   { path: "/relatorios", label: "Relatórios", icon: BarChart3 },
   { path: "/configuracoes", label: "Configurações", icon: Settings },
 ];

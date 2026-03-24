@@ -24,6 +24,7 @@ import ClientePerfilPage from "./pages/ClientePerfilPage";
 import ContatoPerfilPage from "./pages/ContatoPerfilPage";
 import ChatbotConfigPage from "./pages/ChatbotConfigPage";
 import ConsultoresPage from "./pages/ConsultoresPage";
+import FinanceiroPage from "./pages/FinanceiroPage";
 
 export const router = createBrowserRouter([
   // Public route — no layout
@@ -53,6 +54,7 @@ export const router = createBrowserRouter([
       { path: "normas", Component: NormasPage },
       { path: "treinamentos", Component: TreinamentosPage },
       { path: "consultores", Component: ConsultoresPage },
+      { path: "financeiro", Component: FinanceiroPage },
 
       { path: "relatorios", Component: RelatoriosPage },
       { path: "configuracoes", Component: ConfiguracoesPage },
