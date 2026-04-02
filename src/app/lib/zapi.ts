@@ -89,10 +89,12 @@ export async function getZApiStatus(): Promise<ZApiStatus> {
   return request<ZApiStatus>("?action=status");
 }
 
-/** Envia mensagem de texto */
-export async function sendText(phone: string, message: string): Promise<ZApiSendResult> {
+/** Envia mensagem de texto (com reply opcional) */
+export async function sendText(phone: string, message: string, replyMessageId?: string): Promise<ZApiSendResult> {
   const normalized = normalizePhone(phone);
-  return request<ZApiSendResult>("?action=send-text", { phone: normalized, message });
+  const payload: Record<string, string> = { phone: normalized, message };
+  if (replyMessageId) payload.messageId = replyMessageId;
+  return request<ZApiSendResult>("?action=send-text", payload);
 }
 
 /** Envia imagem com legenda opcional */
@@ -155,6 +157,20 @@ export async function modifyChat(phone: string, action: 'read' | 'unread' | 'cle
 /** Busca histórico de mensagens via Z-API */
 export async function getChatMessages(phone: string, amount = 20): Promise<unknown[]> {
   return request<unknown[]>(`?action=messages&phone=${normalizePhone(phone)}&amount=${amount}`);
+}
+
+/** Envia contato (vCard) */
+export async function sendContact(phone: string, contactName: string, contactPhone: string): Promise<ZApiSendResult> {
+  return request<ZApiSendResult>("?action=send-contact", {
+    phone: normalizePhone(phone), contactName, contactPhone: normalizePhone(contactPhone),
+  });
+}
+
+/** Apaga mensagem no WhatsApp */
+export async function deleteMessage(phone: string, messageId: string, owner = true): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>("?action=delete-message", {
+    phone: normalizePhone(phone), messageId, owner,
+  });
 }
 
 // ── Utility message builders ────────────────────────────────────────────────

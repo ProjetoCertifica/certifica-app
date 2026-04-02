@@ -41,7 +41,7 @@ export function DSTable<T extends Record<string, unknown>>({ columns, data, capt
           <tbody>
             {data.map((row, idx) => (
               <tr
-                key={idx}
+                key={row.id ?? idx}
                 className="border-b border-certifica-200 last:border-b-0 hover:bg-certifica-50/50 transition-colors"
               >
                 {columns.map((col) => (

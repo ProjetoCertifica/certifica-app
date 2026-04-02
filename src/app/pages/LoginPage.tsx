@@ -257,7 +257,7 @@ export default function LoginPage() {
                     </label>
                     <button
                       type="button"
-                      onClick={() => toast.info("Entre em contato com o administrador para redefinir sua senha")}
+                      onClick={() => { setError(null); setMode("forgot"); }}
                       className="text-[11px] text-[#2B8EAD] hover:text-[#1F3F66] transition-colors cursor-pointer"
                       style={{ fontWeight: 500 }}
                     >
@@ -317,16 +317,9 @@ export default function LoginPage() {
                   )}
                 </button>
 
-                {/* Link criar conta */}
+                {/* Contato admin */}
                 <p className="text-center text-[12px] text-gray-500 pt-1">
-                  Não tem conta?{" "}
-                  <button
-                    type="button"
-                    onClick={() => toast.info("Entre em contato com o administrador para criar sua conta")}
-                    className="text-[#2B8EAD] hover:text-[#1F3F66] font-medium transition-colors cursor-pointer"
-                  >
-                    Criar conta
-                  </button>
+                  Precisa de acesso? Fale com o administrador.
                 </p>
               </form>
             )}

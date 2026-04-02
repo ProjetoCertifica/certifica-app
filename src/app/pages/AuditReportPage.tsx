@@ -321,7 +321,9 @@ export default function AuditReportPage() {
   }, [liveEvidenceList]);
 
   const selected = useMemo(
-    () => liveEvidenceList.find((item) => item.id === selectedId) ?? liveEvidenceList[0],
+    () => liveEvidenceList.length > 0
+      ? (liveEvidenceList.find((item) => item.id === selectedId) ?? liveEvidenceList[0])
+      : undefined,
     [selectedId, liveEvidenceList]
   );
 

@@ -26,7 +26,6 @@ import {
   Check,
   CheckCheck,
   Keyboard,
-  BookOpen,
   Loader2,
   AlertTriangle,
   Info,
@@ -35,6 +34,7 @@ import {
   Menu,
   Plus,
   Bot,
+  FileText,
 } from "lucide-react";
 import { usePipelines } from "../lib/usePipelines";
 import { useGlobalSearch, type SearchResult } from "../lib/useGlobalSearch";
@@ -85,6 +85,7 @@ const navItems: NavItem[] = [
 
 const bottomItems = [
   { path: "/financeiro", label: "Financeiro", icon: DollarSign },
+  { path: "/propostas", label: "Propostas", icon: FileText },
   { path: "/relatorios", label: "Relatórios", icon: BarChart3 },
   { path: "/configuracoes", label: "Configurações", icon: Settings },
 ];
@@ -147,14 +148,6 @@ const SHORTCUTS = [
   { keys: ["Esc"], desc: "Fechar painel/modal" },
 ];
 
-const DOCS = [
-  { title: "Guia de Início Rápido", desc: "Primeiros passos com a plataforma" },
-  { title: "Gestão de Empresas", desc: "Como cadastrar e gerenciar empresas" },
-  { title: "Pipeline Kanban", desc: "Organizando o fluxo de projetos" },
-  { title: "Auditorias e RAI", desc: "Conduzindo auditorias internas" },
-  { title: "Normas e Certificações", desc: "Referência de normas ISO/NR" },
-  { title: "Relatórios", desc: "Gerando relatórios personalizados" },
-];
 
 export default function AppLayout() {
   const location = useLocation();
@@ -450,7 +443,7 @@ export default function AppLayout() {
                 );
               })}
               {/* Dynamic pipelines under Projetos (only user-created, not default) */}
-              {item.label === "Projetos" && pipelines.filter((pl) => !pl.is_default).map((pl) => {
+              {item.label === "Projetos" && canAccess("/projetos") && pipelines.filter((pl) => !pl.is_default).map((pl) => {
                 const plPath = `/projetos/p/${pl.id}`;
                 const isActive = location.pathname === plPath;
                 return (
@@ -469,7 +462,7 @@ export default function AppLayout() {
                   </NavLink>
                 );
               })}
-              {item.label === "Projetos" && (
+              {item.label === "Projetos" && canAccess("/projetos") && (
                 <button
                   onClick={() => { setNewPipeName(""); setNewPipeDesc(""); setShowCreatePipeline(true); }}
                   className="flex items-center gap-1 pl-3 py-[6px] text-certifica-accent/70 hover:text-certifica-accent transition-colors cursor-pointer whitespace-nowrap"
@@ -646,12 +639,16 @@ export default function AppLayout() {
         {/* User area */}
         <div className="border-t border-certifica-200 flex-shrink-0">
           <div className="flex items-center overflow-hidden px-2.5 py-2.5 gap-2">
-            <div
-              className="w-7 h-7 rounded-full bg-certifica-accent-light flex items-center justify-center text-[10px] text-certifica-accent-dark flex-shrink-0"
-              style={{ fontWeight: 600 }}
-            >
-              {initials}
-            </div>
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt={profile.nome} className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+            ) : (
+              <div
+                className="w-7 h-7 rounded-full bg-certifica-accent-light flex items-center justify-center text-[10px] text-certifica-accent-dark flex-shrink-0"
+                style={{ fontWeight: 600 }}
+              >
+                {initials}
+              </div>
+            )}
             <div
               className="flex-1 min-w-0"
               style={{
@@ -930,34 +927,6 @@ export default function AppLayout() {
                           ))}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="h-px bg-certifica-200 mx-5" />
-
-                {/* Documentation */}
-                <div className="px-5 py-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <BookOpen className="w-4 h-4 text-certifica-accent" strokeWidth={1.5} />
-                    <span className="text-[12.5px] text-certifica-dark" style={{ fontWeight: 600 }}>
-                      Documentação
-                    </span>
-                  </div>
-                  <div className="space-y-1">
-                    {DOCS.map((d) => (
-                      <button
-                        key={d.title}
-                        onClick={() => {
-                          toast.info(`"${d.title}" será disponibilizado em breve.`);
-                        }}
-                        className="w-full text-left px-3 py-2.5 rounded-md hover:bg-certifica-50 transition-colors cursor-pointer"
-                      >
-                        <div className="text-[12px] text-certifica-dark" style={{ fontWeight: 500 }}>
-                          {d.title}
-                        </div>
-                        <div className="text-[10.5px] text-certifica-500/60 mt-0.5">{d.desc}</div>
-                      </button>
                     ))}
                   </div>
                 </div>

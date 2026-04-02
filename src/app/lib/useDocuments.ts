@@ -121,7 +121,7 @@ export function useDocuments() {
   const uploadFile = useCallback(
     async (file: File, path: string): Promise<{ url: string | null; errorMsg: string | null }> => {
       const { error: err } = await supabase.storage
-        .from("Certifica Arquivos")
+        .from("documents")
         .upload(path, file, { upsert: true });
 
       if (err) {
@@ -131,7 +131,7 @@ export function useDocuments() {
       }
 
       const { data } = supabase.storage
-        .from("Certifica Arquivos")
+        .from("documents")
         .getPublicUrl(path);
 
       return { url: data.publicUrl, errorMsg: null };

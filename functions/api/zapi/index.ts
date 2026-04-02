@@ -379,6 +379,34 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       return Response.json(result.data || { value: true });
     }
 
+    if (action === "send-contact") {
+      if (request.method !== "POST") return errorJson(405, "Use POST para send-contact.");
+      const body: any = await request.json().catch(() => ({}));
+      if (!body?.phone || !body?.contactName || !body?.contactPhone)
+        return errorJson(400, "Envie phone, contactName e contactPhone.");
+      const zapiUrl = buildUrl(instance, token, "send-contact");
+      const result = await proxyPost(zapiUrl, clientToken, {
+        phone: normalizePhone(body.phone),
+        contactName: body.contactName,
+        contactPhone: normalizePhone(body.contactPhone),
+      });
+      if (!result.ok) return errorJson(result.status || 500, result.error!);
+      return Response.json(result.data);
+    }
+
+    if (action === "delete-message") {
+      if (request.method !== "DELETE" && request.method !== "POST")
+        return errorJson(405, "Use DELETE ou POST para delete-message.");
+      const body: any = await request.json().catch(() => ({}));
+      if (!body?.messageId || !body?.phone)
+        return errorJson(400, "Envie messageId e phone.");
+      const phoneNorm = normalizePhone(body.phone);
+      const owner = body.owner !== false;
+      const zapiUrl = `${buildUrl(instance, token, "messages")}?messageId=${body.messageId}&phone=${phoneNorm}&owner=${owner}`;
+      const res = await fetch(zapiUrl, { method: "DELETE", headers: clientToken ? { "Client-Token": clientToken } : {} });
+      return Response.json({ ok: res.ok, status: res.status });
+    }
+
     // ── Unknown action ──
     return errorJson(400, `Action desconhecida: ${action}`);
   } catch (e: unknown) {

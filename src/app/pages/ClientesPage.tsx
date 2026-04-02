@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import { useBodyScrollLock } from "../lib/useBodyScrollLock";
 import { DSButton } from "../components/ds/DSButton";
 import { DSBadge } from "../components/ds/DSBadge";
@@ -36,14 +37,14 @@ function CompanyAvatarSmall({ name, id, logoUrl, onLogoChange }: { name: string;
     setUploading(true);
     try {
       const path = `logos/${id}`;
-      const { error: uploadErr } = await supabase.storage.from("Certifica Arquivos").upload(path, file, { upsert: true, contentType: file.type });
+      const { error: uploadErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
       if (uploadErr) throw uploadErr;
-      const { data: urlData } = supabase.storage.from("Certifica Arquivos").getPublicUrl(path);
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
       const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
       await supabase.from("clientes").update({ logo_url: publicUrl }).eq("id", id);
       setLocalUrl(publicUrl);
       onLogoChange(publicUrl);
-    } catch (err) { console.error("Upload error:", err); }
+    } catch (err: any) { console.error("Upload error:", err); toast.error(err?.message ?? "Erro ao fazer upload da imagem."); }
     finally { setUploading(false); if (fileRef.current) fileRef.current.value = ""; }
   };
 

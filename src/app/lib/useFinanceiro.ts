@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "./supabase";
+import { useDataScope } from "./useDataScope";
 
 export interface Faturamento {
   id: string;
@@ -65,7 +66,7 @@ export interface FaturamentoMensal {
 }
 
 /** Parse valor brasileiro: "R$ 45.000,00" → 45000, "50000" → 50000 */
-function parseValorBR(valor: string | number | null | undefined): number {
+export function parseValorBR(valor: string | number | null | undefined): number {
   if (typeof valor === "number") return valor;
   if (!valor) return 0;
   const s = String(valor).replace(/[R$\s]/g, "").trim();
@@ -78,10 +79,11 @@ function parseValorBR(valor: string | number | null | undefined): number {
 }
 
 export function useFinanceiro() {
-  const [faturas, setFaturas] = useState<Faturamento[]>([]);
-  const [projetos, setProjetos] = useState<{ id: string; codigo: string; titulo: string; valor: string; consultor: string; cliente_id: string; cliente_nome: string; status: string }[]>([]);
+  const [faturasRaw, setFaturasRaw] = useState<Faturamento[]>([]);
+  const [projetosRaw, setProjetosRaw] = useState<{ id: string; codigo: string; titulo: string; valor: string; consultor: string; cliente_id: string; cliente_nome: string; status: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { canSeeAllData, consultorNome } = useDataScope();
 
   const fetch = useCallback(async () => {
     setLoading(true);
@@ -98,7 +100,7 @@ export function useFinanceiro() {
       ]);
 
       if (fatRes.status === "fulfilled" && fatRes.value.data) {
-        setFaturas(
+        setFaturasRaw(
           (fatRes.value.data as any[]).map((f) => ({
             ...f,
             valor: Number(f.valor) || 0,
@@ -110,7 +112,7 @@ export function useFinanceiro() {
       }
 
       if (projRes.status === "fulfilled" && projRes.value.data) {
-        setProjetos(
+        setProjetosRaw(
           (projRes.value.data as any[]).map((p) => ({
             id: p.id,
             codigo: p.codigo,
@@ -123,8 +125,8 @@ export function useFinanceiro() {
           }))
         );
       }
-    } catch {
-      // silent
+    } catch (e: unknown) {
+      console.error("[useFinanceiro] Erro ao carregar dados:", e);
     } finally {
       setLoading(false);
     }
@@ -136,10 +138,10 @@ export function useFinanceiro() {
     setSaving(true);
     try {
       const { error } = await supabase.from("faturamento").insert(data as any);
-      if (error) { console.error(error); return false; }
+      if (error) { console.error("[useFinanceiro] Erro ao criar:", error); return false; }
       await fetch();
       return true;
-    } catch { return false; }
+    } catch (e) { console.error("[useFinanceiro] Erro ao criar:", e); return false; }
     finally { setSaving(false); }
   }, [fetch]);
 
@@ -147,21 +149,32 @@ export function useFinanceiro() {
     setSaving(true);
     try {
       const { error } = await supabase.from("faturamento").update(data as any).eq("id", id);
-      if (error) { console.error(error); return false; }
+      if (error) { console.error("[useFinanceiro] Erro ao atualizar:", error); return false; }
       await fetch();
       return true;
-    } catch { return false; }
+    } catch (e) { console.error("[useFinanceiro] Erro ao atualizar:", e); return false; }
     finally { setSaving(false); }
   }, [fetch]);
 
   const remove = useCallback(async (id: string): Promise<boolean> => {
     try {
       const { error } = await supabase.from("faturamento").delete().eq("id", id);
-      if (error) return false;
+      if (error) { console.error("[useFinanceiro] Erro ao remover:", error); return false; }
       await fetch();
       return true;
-    } catch { return false; }
+    } catch (e) { console.error("[useFinanceiro] Erro ao remover:", e); return false; }
   }, [fetch]);
+
+  // Data scope: consultores veem apenas seus próprios dados
+  const faturas = useMemo(() => {
+    if (canSeeAllData || !consultorNome) return faturasRaw;
+    return faturasRaw.filter((f) => f.consultor === consultorNome);
+  }, [faturasRaw, canSeeAllData, consultorNome]);
+
+  const projetos = useMemo(() => {
+    if (canSeeAllData || !consultorNome) return projetosRaw;
+    return projetosRaw.filter((p) => p.consultor === consultorNome);
+  }, [projetosRaw, canSeeAllData, consultorNome]);
 
   // KPIs
   const now = new Date();

@@ -15,14 +15,24 @@ interface Env {
 
 const RECALL_BASE = "https://us-west-2.recall.ai/api/v1";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
 export const onRequest: PagesFunction<Env> = async (context) => {
   const { request, env, params } = context;
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
 
   const token = env.RECALL_API_TOKEN;
   if (!token) {
     return Response.json(
       { error: "RECALL_API_TOKEN não configurado. Acesse Cloudflare Pages → Settings → Environment Variables." },
-      { status: 500 },
+      { status: 500, headers: corsHeaders },
     );
   }
 
@@ -57,12 +67,14 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     const ct = upstream.headers.get("content-type");
     if (ct) responseHeaders.set("Content-Type", ct);
 
+    for (const [k, v] of Object.entries(corsHeaders)) responseHeaders.set(k, v);
+
     return new Response(upstream.body, {
       status: upstream.status,
       headers: responseHeaders,
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Erro ao conectar com Recall.ai";
-    return Response.json({ error: msg }, { status: 502 });
+    return Response.json({ error: msg }, { status: 502, headers: corsHeaders });
   }
 };

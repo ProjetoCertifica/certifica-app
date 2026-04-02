@@ -956,7 +956,7 @@ export default function ReunioesPage() {
                           </div>
                           <div className="space-y-1.5">
                             {(selected.resumo_historico as any[]).map((h: any, idx: number) => (
-                              <div key={idx} className="flex items-center gap-2 text-[11px] text-certifica-500">
+                              <div key={h.aprovado_em ?? h.editado_em ?? idx} className="flex items-center gap-2 text-[11px] text-certifica-500">
                                 <Clock className="w-3 h-3 text-certifica-500/40" strokeWidth={1.5} />
                                 <span>
                                   {h.aprovado_em ? `Aprovado em ${new Date(h.aprovado_em).toLocaleString("pt-BR")}` : ""}
@@ -980,7 +980,7 @@ export default function ReunioesPage() {
                           </div>
                           <div className="px-4 py-3 space-y-2">
                             {selected.acoes.slice(0, 4).map((item, idx) => (
-                              <div key={idx} className="flex items-start gap-2">
+                              <div key={`action-${idx}-${item.descricao.slice(0, 12)}`} className="flex items-start gap-2">
                                 <button
                                   onClick={() => handleToggleAction(idx)}
                                   className={`w-4 h-4 border rounded-[2px] flex-shrink-0 mt-0.5 cursor-pointer transition-colors flex items-center justify-center ${
@@ -1044,7 +1044,7 @@ export default function ReunioesPage() {
                           </div>
                           <div className="divide-y divide-certifica-200/60">
                             {selected.transcricao.map((line, idx) => (
-                              <div key={idx} className="px-4 py-2.5 flex gap-3 hover:bg-certifica-50/30 transition-colors">
+                              <div key={`${line.time}-${idx}`} className="px-4 py-2.5 flex gap-3 hover:bg-certifica-50/30 transition-colors">
                                 <div className="flex-shrink-0 w-[60px]">
                                   <span className="text-[10px] text-certifica-500 font-mono">{line.time}</span>
                                 </div>
@@ -1134,7 +1134,7 @@ export default function ReunioesPage() {
                             <div className="py-8 text-center text-[12px] text-certifica-500">Nenhuma ação identificada.</div>
                           ) : (
                             selected.acoes.map((item, idx) => (
-                              <div key={idx} className="px-4 py-3 flex items-start gap-3">
+                              <div key={`full-action-${idx}-${item.descricao.slice(0, 12)}`} className="px-4 py-3 flex items-start gap-3">
                                 <button
                                   onClick={() => handleToggleAction(idx)}
                                   className={`w-4 h-4 border rounded-[2px] flex-shrink-0 mt-0.5 cursor-pointer transition-colors flex items-center justify-center ${

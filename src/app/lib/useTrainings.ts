@@ -178,14 +178,14 @@ export function useTrainings() {
       const ext = file.name.split(".").pop() ?? "bin";
       const path = `trainings/${trainingId}/${Date.now()}.${ext}`;
       const { error: err } = await supabase.storage
-        .from("Certifica Arquivos")
+        .from("documents")
         .upload(path, file, { upsert: true });
       if (err) {
         console.error("[Storage upload error]", err);
         setError(err.message);
         return { url: null, errorMsg: err.message };
       }
-      const { data } = supabase.storage.from("Certifica Arquivos").getPublicUrl(path);
+      const { data } = supabase.storage.from("documents").getPublicUrl(path);
       return { url: data.publicUrl, errorMsg: null };
     },
     []

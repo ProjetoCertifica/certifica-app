@@ -15,7 +15,6 @@ import {
   X,
   RefreshCw,
   FileText,
-  Download,
 } from "lucide-react";
 import {
   BarChart,
@@ -28,6 +27,7 @@ import {
   Legend,
 } from "recharts";
 import { useFinanceiro, type FaturamentoInsert } from "../lib/useFinanceiro";
+import FechamentoTab from "../components/financeiro/FechamentoTab";
 import { toast } from "sonner";
 
 function currency(value: number): string {
@@ -285,55 +285,7 @@ export default function FinanceiroPage() {
       )}
 
       {tab === "fechamento" && (
-        <DSCard header={<span className="text-[13px] text-certifica-900" style={{ fontWeight: 600 }}>Fechamento por Consultor</span>}>
-          {fin.fechamentoConsultores.length === 0 ? (
-            <div className="py-8 text-center text-[12px] text-certifica-500">Nenhum dado para fechamento</div>
-          ) : (
-            <>
-              <DSTable
-                columns={[
-                  { key: "consultor", header: "Consultor", render: (row) => <span className="text-[12.5px] text-certifica-dark" style={{ fontWeight: 500 }}>{(row as any).consultor}</span> },
-                  { key: "projetos", header: "Projetos", render: (row) => <span className="text-[12px] font-mono">{(row as any).totalProjetos}</span> },
-                  { key: "contratado", header: "Contratado", render: (row) => <span className="text-[12px] font-mono">{currency((row as any).valorContratado)}</span> },
-                  { key: "faturado", header: "Faturado", render: (row) => <span className="text-[12px] font-mono">{currency((row as any).valorFaturado)}</span> },
-                  { key: "pago", header: "Pago", render: (row) => <span className="text-[12px] font-mono text-conformidade" style={{ fontWeight: 600 }}>{currency((row as any).valorPago)}</span> },
-                  { key: "pendente", header: "Pendente", render: (row) => <span className="text-[12px] font-mono text-observacao" style={{ fontWeight: 600 }}>{currency((row as any).valorPendente)}</span> },
-                  {
-                    key: "perc",
-                    header: "% Faturado",
-                    render: (row) => {
-                      const r = row as any;
-                      const perc = r.valorContratado > 0 ? Math.round((r.valorFaturado / r.valorContratado) * 100) : 0;
-                      return (
-                        <div className="flex items-center gap-2">
-                          <div className="w-12 h-[4px] bg-certifica-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-certifica-accent rounded-full" style={{ width: `${Math.min(100, perc)}%` }} />
-                          </div>
-                          <span className="text-[10px] font-mono text-certifica-500">{perc}%</span>
-                        </div>
-                      );
-                    },
-                  },
-                ]}
-                data={fin.fechamentoConsultores}
-              />
-              {/* Totals row */}
-              <div className="mt-3 pt-3 border-t border-certifica-200 grid grid-cols-4 gap-4">
-                {[
-                  { label: "Total Contratado", value: currency(fin.fechamentoConsultores.reduce((s, c) => s + c.valorContratado, 0)) },
-                  { label: "Total Faturado", value: currency(fin.fechamentoConsultores.reduce((s, c) => s + c.valorFaturado, 0)) },
-                  { label: "Total Pago", value: currency(fin.fechamentoConsultores.reduce((s, c) => s + c.valorPago, 0)) },
-                  { label: "Total Pendente", value: currency(fin.fechamentoConsultores.reduce((s, c) => s + c.valorPendente, 0)) },
-                ].map((t) => (
-                  <div key={t.label} className="text-right">
-                    <div className="text-[10px] text-certifica-500">{t.label}</div>
-                    <div className="text-[14px] text-certifica-900 font-mono" style={{ fontWeight: 700 }}>{t.value}</div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </DSCard>
+        <FechamentoTab faturas={fin.faturas} projetos={fin.projetos} mesAtual={fin.mesAtual} />
       )}
 
       {/* New NF Modal */}

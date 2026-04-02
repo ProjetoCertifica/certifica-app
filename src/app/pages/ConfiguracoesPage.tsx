@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { DSBadge } from "../components/ds/DSBadge";
 import { DSButton } from "../components/ds/DSButton";
@@ -6,18 +6,78 @@ import { DSCard } from "../components/ds/DSCard";
 import { DSInput } from "../components/ds/DSInput";
 import { DSSelect } from "../components/ds/DSSelect";
 import { DSTextarea } from "../components/ds/DSTextarea";
-import { Bell, CalendarClock, Database, Lock, MessageCircle, Plus, RefreshCw, Save, Shield, Trash2, Wifi, WifiOff, CalendarDays, CheckCircle2, XCircle, ExternalLink, UserCheck, UserX } from "lucide-react";
+import { Bell, Camera, Database, Loader2, Lock, MessageCircle, RefreshCw, Save, Shield, Wifi, WifiOff, CalendarDays, CheckCircle2, XCircle, ExternalLink, UserCheck, UserX } from "lucide-react";
 import { useSettings } from "../lib/useSettings";
 import { useWhatsApp } from "../lib/useWhatsApp";
 import { useGoogleCalendar } from "../lib/useGoogleCalendar";
 import { supabase } from "../lib/supabase";
 
+/* ── User Avatar with Upload ── */
+function UserAvatar({ id, name, avatarUrl, onAvatarChange }: { id: string; name: string; avatarUrl?: string | null; onAvatarChange: (url: string) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [localUrl, setLocalUrl] = useState(avatarUrl);
+  useEffect(() => { setLocalUrl(avatarUrl); }, [avatarUrl]);
+
+  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `${id}/avatar.${ext}`;
+      const { error: uploadErr } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (uploadErr) throw new Error(`Upload falhou: ${uploadErr.message}`);
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+      const { data: updated, error: updateErr } = await supabase
+        .from("profiles")
+        .update({ avatar_url: publicUrl })
+        .eq("id", id)
+        .select();
+      if (updateErr) throw new Error(`Erro ao salvar no perfil: ${updateErr.message}`);
+      if (!updated || updated.length === 0) throw new Error("Perfil não atualizado — verifique se você está logado.");
+      setLocalUrl(publicUrl);
+      onAvatarChange(publicUrl);
+      toast.success("Foto atualizada!");
+    } catch (err: any) {
+      console.error("Avatar upload error:", err);
+      toast.error(err?.message ?? "Erro ao fazer upload da foto.");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  return (
+    <div className="relative group flex-shrink-0 w-9 h-9">
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+      {localUrl ? (
+        <img src={localUrl} alt={name} className="w-9 h-9 rounded-full object-cover" />
+      ) : (
+        <div className="w-9 h-9 rounded-full bg-certifica-accent-light flex items-center justify-center text-[10px] text-certifica-accent-dark" style={{ fontWeight: 600 }}>
+          {initials || "?"}
+        </div>
+      )}
+      <button
+        onClick={() => fileRef.current?.click()}
+        disabled={uploading}
+        className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+      >
+        {uploading ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" /> : <Camera className="w-3.5 h-3.5 text-white" strokeWidth={1.5} />}
+      </button>
+    </div>
+  );
+}
+
 type SettingsTab =
   | "usuarios"
   | "permissoes"
   | "empresa"
-  | "modelos"
-  | "workflow"
   | "integracoes"
   | "logs";
 
@@ -32,30 +92,6 @@ interface UserItem {
   status: "ativo" | "inativo";
 }
 
-interface TemplateItem {
-  id: string;
-  name: string;
-  category: string;
-  active: boolean;
-}
-
-interface WorkflowRule {
-  id: string;
-  name: string;
-  stage: string;
-  slaHours: number;
-  autoAction: boolean;
-  active: boolean;
-}
-
-interface IntegrationItem {
-  id: string;
-  name: string;
-  connected: boolean;
-  account: string;
-  lastSync: string;
-}
-
 interface AuditLogItem {
   id: string;
   date: string;
@@ -68,35 +104,17 @@ const tabs: { id: SettingsTab; label: string }[] = [
   { id: "usuarios", label: "Usuários e perfis" },
   { id: "permissoes", label: "Permissões granulares" },
   { id: "empresa", label: "Parâmetros da empresa" },
-  { id: "modelos", label: "Modelos de documento" },
-  { id: "workflow", label: "Regras de workflow" },
   { id: "integracoes", label: "Integrações" },
   { id: "logs", label: "Logs e auditoria" },
 ];
 
 const localRoleOptions: LocalRole[] = ["admin", "gestor", "consultor", "auditor", "cliente"];
-const modules = ["Dashboard", "Empresas", "Projetos", "Auditorias", "RAI", "Documentos", "Relatórios", "Configurações"];
-
-const defaultTemplates: TemplateItem[] = [
-  { id: "T-001", name: "RAI padrao Certifica", category: "Auditoria", active: true },
-  { id: "T-002", name: "Plano de Acao NC", category: "Nao conformidade", active: true },
-  { id: "T-003", name: "Resumo executivo mensal", category: "Relatorios", active: true },
-  { id: "T-004", name: "Checklist onboarding cliente", category: "Projetos", active: false },
+const modules = [
+  "Dashboard", "Reuniões", "Calendário", "Chat", "Chatbot",
+  "Empresas", "Consultores", "Projetos", "Documentos", "Auditorias",
+  "Normas", "Treinamentos", "Financeiro", "Propostas", "Relatórios", "Configurações",
 ];
 
-const defaultRules: WorkflowRule[] = [
-  { id: "W-001", name: "Aprovacao RAI", stage: "revisao-tecnica", slaHours: 24, autoAction: true, active: true },
-  { id: "W-002", name: "Revisao documental", stage: "revisao", slaHours: 48, autoAction: true, active: true },
-  { id: "W-003", name: "Escalonamento NC critica", stage: "tratamento", slaHours: 12, autoAction: true, active: true },
-];
-
-const defaultIntegrations: IntegrationItem[] = [
-  { id: "I-001", name: "Google Drive", connected: true, account: "ops@certifica.com", lastSync: "19/02/2026 09:10" },
-  { id: "I-002", name: "Google Meet", connected: true, account: "ops@certifica.com", lastSync: "19/02/2026 08:55" },
-  { id: "I-003", name: "WhatsApp / Z-API", connected: false, account: "", lastSync: "Nunca" },
-  { id: "I-004", name: "E-mail SMTP", connected: true, account: "no-reply@certifica.com", lastSync: "19/02/2026 09:04" },
-  { id: "I-005", name: "Calendario", connected: true, account: "ops@certifica.com", lastSync: "19/02/2026 09:07" },
-];
 
 export default function ConfiguracoesPage() {
   const { settings, profiles, roles, loading, error, getSetting, saveAllSettings, load, updateProfile, deactivateProfile } = useSettings();
@@ -104,9 +122,6 @@ export default function ConfiguracoesPage() {
   const googleCalendar = useGoogleCalendar();
 
   const [tab, setTab] = useState<SettingsTab>("usuarios");
-  const [templates, setTemplates] = useState<TemplateItem[]>(defaultTemplates);
-  const [rules, setRules] = useState<WorkflowRule[]>(defaultRules);
-  const [integrations, setIntegrations] = useState<IntegrationItem[]>(defaultIntegrations);
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [logSearch, setLogSearch] = useState("");
   const [logsLoading, setLogsLoading] = useState(false);
@@ -140,8 +155,6 @@ export default function ConfiguracoesPage() {
   // Build matrix from roles fetched from DB. Falls back to default permission levels.
   const [matrix, setMatrix] = useState<Record<string, Record<string, PermissionLevel>>>({});
 
-  const [newUser, setNewUser] = useState({ name: "", email: "", role: "consultor" as LocalRole });
-  const [newTemplate, setNewTemplate] = useState({ name: "", category: "" });
   const [saveStamp, setSaveStamp] = useState("");
 
   // Map DB profiles to local UserItem format
@@ -342,9 +355,20 @@ export default function ConfiguracoesPage() {
             const dbProfile = profiles.find((p) => p.id === u.id);
             return (
             <div key={u.id} className="border border-certifica-200 rounded-[4px] px-3 py-2 flex items-center justify-between">
-              <div>
-                <div className="text-[12px] text-certifica-900" style={{ fontWeight: 600 }}>{u.name}</div>
-                <div className="text-[10.5px] text-certifica-500">{u.email}</div>
+              <div className="flex items-center gap-3">
+                <UserAvatar
+                  id={u.id}
+                  name={u.name}
+                  avatarUrl={dbProfile?.avatar_url}
+                  onAvatarChange={(url) => {
+                    // Refresh profiles to reflect new avatar
+                    load();
+                  }}
+                />
+                <div>
+                  <div className="text-[12px] text-certifica-900" style={{ fontWeight: 600 }}>{u.name}</div>
+                  <div className="text-[10.5px] text-certifica-500">{u.email}</div>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <DSBadge variant={u.status === "ativo" ? "conformidade" : "outline"}>{u.status}</DSBadge>
@@ -388,27 +412,6 @@ export default function ConfiguracoesPage() {
           {users.length === 0 && !loading && (
             <div className="text-[12px] text-certifica-500 py-2">Nenhum usuário encontrado.</div>
           )}
-        </div>
-      </DSCard>
-
-      <DSCard header={<span className="text-[13px] text-certifica-900" style={{ fontWeight: 600 }}>Adicionar usuário</span>}>
-        <div className="grid grid-cols-3 gap-2">
-          <DSInput label="Nome" value={newUser.name} onChange={(e) => setNewUser((p) => ({ ...p, name: e.target.value }))} />
-          <DSInput label="E-mail" value={newUser.email} onChange={(e) => setNewUser((p) => ({ ...p, email: e.target.value }))} />
-          <DSSelect label="Perfil" value={newUser.role} onChange={(e) => setNewUser((p) => ({ ...p, role: e.target.value as LocalRole }))} options={localRoleOptions.map((r) => ({ value: r, label: r }))} />
-        </div>
-        <div className="flex justify-end mt-3">
-          <DSButton
-            size="sm"
-            icon={<Plus className="w-3 h-3" strokeWidth={1.5} />}
-            onClick={() => {
-              if (!newUser.name.trim() || !newUser.email.trim()) return;
-              toast.info("Criação de usuários requer acesso ao painel de autenticação.");
-              setNewUser({ name: "", email: "", role: "consultor" });
-            }}
-          >
-            Criar usuário
-          </DSButton>
         </div>
       </DSCard>
 
@@ -529,146 +532,8 @@ export default function ConfiguracoesPage() {
     </div>
   );
 
-  const renderModelos = () => (
-    <div className="space-y-4">
-      <DSCard header={<span className="text-[13px] text-certifica-900" style={{ fontWeight: 600 }}>Modelos de documento</span>}>
-        <div className="space-y-2">
-          {templates.map((t) => (
-            <div key={t.id} className="border border-certifica-200 rounded-[4px] px-3 py-2 flex items-center justify-between">
-              <div>
-                <div className="text-[12px] text-certifica-900" style={{ fontWeight: 600 }}>{t.name}</div>
-                <div className="text-[10.5px] text-certifica-500">{t.category}</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-[11px] text-certifica-500 flex items-center gap-1">
-                  <input
-                    type="checkbox"
-                    checked={t.active}
-                    onChange={(e) => {
-                      setTemplates((prev) => prev.map((x) => (x.id === t.id ? { ...x, active: e.target.checked } : x)));
-                    }}
-                  />
-                  Ativo
-                </label>
-                <button
-                  className="p-1 text-certifica-500 hover:text-nao-conformidade"
-                  onClick={() => {
-                    setTemplates((prev) => prev.filter((x) => x.id !== t.id));
-                  }}
-                >
-                  <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </DSCard>
-
-      <DSCard header={<span className="text-[13px] text-certifica-900" style={{ fontWeight: 600 }}>Novo modelo</span>}>
-        <div className="grid grid-cols-2 gap-2">
-          <DSInput label="Nome do modelo" value={newTemplate.name} onChange={(e) => setNewTemplate((p) => ({ ...p, name: e.target.value }))} />
-          <DSInput label="Categoria" value={newTemplate.category} onChange={(e) => setNewTemplate((p) => ({ ...p, category: e.target.value }))} />
-        </div>
-        <div className="flex justify-end mt-3">
-          <DSButton
-            size="sm"
-            onClick={() => {
-              if (!newTemplate.name.trim() || !newTemplate.category.trim()) return;
-              const item: TemplateItem = { id: `T-${Date.now()}`, name: newTemplate.name.trim(), category: newTemplate.category.trim(), active: true };
-              setTemplates((prev) => [item, ...prev]);
-              setNewTemplate({ name: "", category: "" });
-              toast.success(`Modelo "${item.name}" criado.`);
-            }}
-          >
-            Criar modelo
-          </DSButton>
-        </div>
-      </DSCard>
-    </div>
-  );
-
-  const renderWorkflow = () => (
-    <div className="space-y-4">
-      <DSCard header={<span className="text-[13px] text-certifica-900" style={{ fontWeight: 600 }}>Regras de workflow</span>}>
-        <div className="space-y-2">
-          {rules.map((r) => (
-            <div key={r.id} className="border border-certifica-200 rounded-[4px] px-3 py-2">
-              <div className="flex items-center justify-between mb-1">
-                <div className="text-[12px] text-certifica-900" style={{ fontWeight: 600 }}>{r.name}</div>
-                <DSBadge variant={r.active ? "conformidade" : "outline"}>{r.active ? "ativo" : "inativo"}</DSBadge>
-              </div>
-              <div className="grid grid-cols-4 gap-2">
-                <DSInput
-                  label="Etapa"
-                  value={r.stage}
-                  onChange={(e) => setRules((prev) => prev.map((x) => (x.id === r.id ? { ...x, stage: e.target.value } : x)))}
-                />
-                <DSInput
-                  label="SLA (horas)"
-                  value={String(r.slaHours)}
-                  onChange={(e) => setRules((prev) => prev.map((x) => (x.id === r.id ? { ...x, slaHours: Number(e.target.value || 0) } : x)))}
-                />
-                <label className="text-[11px] text-certifica-500 flex items-end pb-2 gap-1.5">
-                  <input
-                    type="checkbox"
-                    checked={r.autoAction}
-                    onChange={(e) => setRules((prev) => prev.map((x) => (x.id === r.id ? { ...x, autoAction: e.target.checked } : x)))}
-                  />
-                  Automacao
-                </label>
-                <label className="text-[11px] text-certifica-500 flex items-end pb-2 gap-1.5">
-                  <input
-                    type="checkbox"
-                    checked={r.active}
-                    onChange={(e) => setRules((prev) => prev.map((x) => (x.id === r.id ? { ...x, active: e.target.checked } : x)))}
-                  />
-                  Regra ativa
-                </label>
-              </div>
-            </div>
-          ))}
-        </div>
-      </DSCard>
-
-      <DSCard header={<span className="text-[13px] text-certifica-900" style={{ fontWeight: 600 }}>SLA e automacoes configuraveis</span>}>
-        <div className="text-[12px] text-certifica-500">
-          Total de regras ativas: <strong className="text-certifica-900">{rules.filter((r) => r.active).length}</strong> ·
-          Automacoes ligadas: <strong className="text-certifica-900">{rules.filter((r) => r.autoAction).length}</strong> ·
-          SLA medio: <strong className="text-certifica-900">{rules.length > 0 ? Math.round(rules.reduce((acc, r) => acc + r.slaHours, 0) / rules.length) : 0}h</strong>
-        </div>
-      </DSCard>
-    </div>
-  );
-
   const renderIntegracoes = () => (
     <div className="space-y-4">
-      <DSCard header={<span className="text-[13px] text-certifica-900" style={{ fontWeight: 600 }}>Integrações</span>}>
-        <div className="space-y-2">
-          {integrations.map((i) => (
-            <div key={i.id} className="border border-certifica-200 rounded-[4px] px-3 py-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-[12px] text-certifica-900" style={{ fontWeight: 600 }}>{i.name}</div>
-                  <div className="text-[10.5px] text-certifica-500">Conta: {i.account || "Não configurada"} · Últ. sync: {i.lastSync}</div>
-                </div>
-                <label className="text-[11px] text-certifica-500 flex items-center gap-1.5">
-                  <input
-                    type="checkbox"
-                    checked={i.connected}
-                    onChange={(e) => {
-                      const connected = e.target.checked;
-                      setIntegrations((prev) => prev.map((x) => (x.id === i.id ? { ...x, connected } : x)));
-                      toast.info(`${connected ? "Conectado" : "Desconectado"}: ${i.name}`);
-                    }}
-                  />
-                  Conectado
-                </label>
-              </div>
-            </div>
-          ))}
-        </div>
-      </DSCard>
-
       {/* ── Z-API / WhatsApp — painel de configuração ── */}
       <DSCard header={
         <div className="flex items-center gap-2">
@@ -718,13 +583,6 @@ export default function ConfiguracoesPage() {
                 const s = await whatsApp.checkStatus();
                 if (s?.connected) {
                   toast.success("WhatsApp conectado com sucesso!");
-                  setIntegrations((prev) =>
-                    prev.map((x) =>
-                      x.id === "I-003"
-                        ? { ...x, connected: true, account: s.phone ?? "WhatsApp", lastSync: new Date().toLocaleString("pt-BR") }
-                        : x
-                    )
-                  );
                 } else if (whatsApp.statusError) {
                   toast.error("Erro ao conectar: " + whatsApp.statusError);
                 } else {
@@ -825,13 +683,6 @@ export default function ConfiguracoesPage() {
                   onClick={() => {
                     googleCalendar.disconnect();
                     toast.info("Google Calendar desconectado.");
-                    setIntegrations((prev) =>
-                      prev.map((x) =>
-                        x.id === "I-005"
-                          ? { ...x, connected: false, account: "", lastSync: "Nunca" }
-                          : x
-                      )
-                    );
                   }}
                 >
                   Desconectar
@@ -894,7 +745,7 @@ export default function ConfiguracoesPage() {
         <div>
           <h2 className="text-certifica-900">Configurações</h2>
           <p className="text-[12px] text-certifica-500 mt-0.5">
-            Governança completa: usuários, permissões, workflow, segurança, LGPD e auditoria do sistema.
+            Usuários, permissões, empresa, integrações e auditoria do sistema.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -907,7 +758,7 @@ export default function ConfiguracoesPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-5 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <DSCard>
           <div className="flex items-center justify-between">
             <span className="text-[11px] text-certifica-500">Usuarios ativos</span>
@@ -916,20 +767,6 @@ export default function ConfiguracoesPage() {
           <div className="text-[22px] text-certifica-900 mt-1" style={{ fontWeight: 600 }}>
             {loading ? "..." : users.filter((u) => u.status === "ativo").length}
           </div>
-        </DSCard>
-        <DSCard>
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] text-certifica-500">Integrações ativas</span>
-            <CalendarClock className="w-3.5 h-3.5 text-observacao" strokeWidth={1.5} />
-          </div>
-          <div className="text-[22px] text-certifica-900 mt-1" style={{ fontWeight: 600 }}>{integrations.filter((i) => i.connected).length}</div>
-        </DSCard>
-        <DSCard>
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] text-certifica-500">Regras SLA ativas</span>
-            <CalendarClock className="w-3.5 h-3.5 text-certifica-accent" strokeWidth={1.5} />
-          </div>
-          <div className="text-[22px] text-certifica-900 mt-1" style={{ fontWeight: 600 }}>{rules.filter((r) => r.active).length}</div>
         </DSCard>
         <DSCard>
           <div className="flex items-center justify-between">
@@ -962,8 +799,6 @@ export default function ConfiguracoesPage() {
       {tab === "usuarios" && renderUsuarios()}
       {tab === "permissoes" && renderPermissoes()}
       {tab === "empresa" && renderEmpresa()}
-      {tab === "modelos" && renderModelos()}
-      {tab === "workflow" && renderWorkflow()}
       {tab === "integracoes" && renderIntegracoes()}
       {tab === "logs" && renderLogs()}
     </div>

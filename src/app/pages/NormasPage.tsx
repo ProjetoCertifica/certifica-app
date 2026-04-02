@@ -1,10 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { DSBadge } from "../components/ds/DSBadge";
 import { DSButton } from "../components/ds/DSButton";
+import { useNormas } from "../lib/useNormas";
+import { toast } from "sonner";
 import {
   Search, BookOpen, Building2, ChevronRight, ChevronDown, Plus, X,
   CheckCircle2, AlertTriangle, FileText, Users, Shield, Leaf, Zap,
   Globe, Truck, Lock, Heart, Factory, Lightbulb, ExternalLink, Copy,
+  RefreshCw, Trash2,
 } from "lucide-react";
 
 type NormCategory = "qualidade" | "ambiental" | "seguranca" | "energia" | "informacao" | "responsabilidade" | "automotivo" | "alimentos" | "saude" | "telecom" | "continuidade" | "outro";
@@ -30,17 +33,6 @@ interface Norm {
   benefits: string[];
   clauses: NormClause[];
   popularity: number;
-}
-
-interface CompanyAssignment {
-  id: string;
-  companyName: string;
-  normId: string;
-  status: ImplStatus;
-  startDate: string;
-  targetDate: string;
-  consultant: string;
-  progress: number;
 }
 
 const categoryMeta: Record<NormCategory, { label: string; color: string; icon: React.ReactNode }> = {
@@ -403,29 +395,13 @@ const norms: Norm[] = [
   },
 ];
 
-const mockCompanies = [
-  "Metalúrgica AçoForte", "Grupo Energis", "Plastiform Industrial",
-  "TechSoft Sistemas", "BioFarma Ltda", "Construtora Nova Era",
-  "Alimentos Sabor & Cia", "TransLog Logística", "EcoVerde Sustentável",
-];
-
-const consultants = ["Carlos Silva", "Ana Costa", "Roberto Lima", "Juliana Mendes"];
-
 export default function NormasPage() {
+  const { vinculos, clientes, consultores, loading, saving, create, remove } = useNormas();
+
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<NormCategory | "todas">("todas");
   const [selectedNorm, setSelectedNorm] = useState<Norm | null>(null);
   const [expandedClause, setExpandedClause] = useState<string | null>(null);
-  const [assignments, setAssignments] = useState<CompanyAssignment[]>([
-    { id: "a1", companyName: "Metalúrgica AçoForte", normId: "iso9001", status: "certificado", startDate: "2024-01-15", targetDate: "2024-12-30", consultant: "Carlos Silva", progress: 100 },
-    { id: "a2", companyName: "Metalúrgica AçoForte", normId: "iso14001", status: "em-andamento", startDate: "2025-03-01", targetDate: "2026-06-30", consultant: "Ana Costa", progress: 45 },
-    { id: "a3", companyName: "Grupo Energis", normId: "iso50001", status: "em-andamento", startDate: "2025-06-01", targetDate: "2026-08-15", consultant: "Carlos Silva", progress: 30 },
-    { id: "a4", companyName: "Grupo Energis", normId: "iso9001", status: "certificado", startDate: "2023-02-10", targetDate: "2024-01-30", consultant: "Roberto Lima", progress: 100 },
-    { id: "a5", companyName: "Plastiform Industrial", normId: "iso14001", status: "certificado", startDate: "2024-05-01", targetDate: "2025-04-30", consultant: "Juliana Mendes", progress: 100 },
-    { id: "a6", companyName: "TechSoft Sistemas", normId: "iso27001", status: "em-andamento", startDate: "2025-09-01", targetDate: "2026-12-30", consultant: "Ana Costa", progress: 20 },
-    { id: "a7", companyName: "Alimentos Sabor & Cia", normId: "iso22000", status: "implementado", startDate: "2025-01-10", targetDate: "2026-03-15", consultant: "Roberto Lima", progress: 85 },
-    { id: "a8", companyName: "BioFarma Ltda", normId: "iso9001", status: "em-andamento", startDate: "2025-11-01", targetDate: "2026-10-30", consultant: "Carlos Silva", progress: 15 },
-  ]);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignForm, setAssignForm] = useState({ company: "", normId: "", consultant: "", targetDate: "" });
 
@@ -450,29 +426,53 @@ export default function NormasPage() {
 
   const normAssignments = useMemo(() => {
     if (!selectedNorm) return [];
-    return assignments.filter((a) => a.normId === selectedNorm.id);
-  }, [selectedNorm, assignments]);
+    return vinculos.filter((v) => v.norma_code === selectedNorm.id);
+  }, [selectedNorm, vinculos]);
 
-  const handleAssign = () => {
+  const handleAssign = async () => {
     if (!assignForm.company || !assignForm.normId || !assignForm.consultant || !assignForm.targetDate) return;
-    const exists = assignments.some((a) => a.companyName === assignForm.company && a.normId === assignForm.normId && a.status !== "certificado");
-    if (exists) { alert("Essa empresa já possui essa norma em andamento."); return; }
-    setAssignments((prev) => [...prev, {
-      id: `a-${Date.now()}`, companyName: assignForm.company, normId: assignForm.normId,
-      status: "nao-iniciado", startDate: new Date().toISOString().slice(0, 10),
-      targetDate: assignForm.targetDate, consultant: assignForm.consultant, progress: 0,
-    }]);
-    setAssignForm({ company: "", normId: "", consultant: "", targetDate: "" });
-    setShowAssignModal(false);
+    const exists = vinculos.some((v) => v.cliente_id === assignForm.company && v.norma_code === assignForm.normId && v.status !== "certificado");
+    if (exists) { toast.error("Essa empresa já possui essa norma em andamento."); return; }
+    const ok = await create({
+      cliente_id: assignForm.company,
+      norma_code: assignForm.normId,
+      consultor: assignForm.consultant,
+      data_meta: assignForm.targetDate,
+    });
+    if (ok) {
+      toast.success("Norma vinculada com sucesso!");
+      setAssignForm({ company: "", normId: "", consultant: "", targetDate: "" });
+      setShowAssignModal(false);
+    } else {
+      toast.error("Erro ao vincular norma. Tente novamente.");
+    }
+  };
+
+  const handleRemove = async (id: string) => {
+    const ok = await remove(id);
+    if (ok) {
+      toast.success("Vínculo removido.");
+    } else {
+      toast.error("Erro ao remover vínculo.");
+    }
   };
 
   const stats = useMemo(() => {
-    const total = assignments.length;
-    const cert = assignments.filter((a) => a.status === "certificado").length;
-    const andamento = assignments.filter((a) => a.status === "em-andamento").length;
-    const impl = assignments.filter((a) => a.status === "implementado").length;
+    const total = vinculos.length;
+    const cert = vinculos.filter((v) => v.status === "certificado").length;
+    const andamento = vinculos.filter((v) => v.status === "em-andamento").length;
+    const impl = vinculos.filter((v) => v.status === "implementado").length;
     return { total, cert, andamento, impl };
-  }, [assignments]);
+  }, [vinculos]);
+
+  if (loading) {
+    return (
+      <div className="p-5 flex items-center justify-center h-64">
+        <RefreshCw className="w-5 h-5 text-certifica-accent animate-spin" />
+        <span className="ml-2 text-[12px] text-certifica-500">Carregando normas...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="p-5 space-y-4">
@@ -519,7 +519,7 @@ export default function NormasPage() {
           <div className="space-y-2">
             {filteredNorms.map((norm) => {
               const cat = categoryMeta[norm.category];
-              const companyCount = assignments.filter((a) => a.normId === norm.id).length;
+              const companyCount = vinculos.filter((v) => v.norma_code === norm.id).length;
               const isActive = selectedNorm?.id === norm.id;
               return (
                 <button key={norm.id} onClick={() => { setSelectedNorm(norm); setExpandedClause(null); }} className={`w-full text-left bg-white border rounded-[4px] p-3.5 transition-all ${isActive ? "border-certifica-accent shadow-sm" : "border-certifica-200 hover:border-certifica-accent/40"}`}>
@@ -652,22 +652,31 @@ export default function NormasPage() {
                     <p className="text-[11px] text-certifica-500 italic">Nenhuma empresa vinculada a esta norma.</p>
                   ) : (
                     <div className="space-y-1.5">
-                      {normAssignments.map((a) => {
-                        const st = statusMeta[a.status];
+                      {normAssignments.map((v) => {
+                        const st = statusMeta[v.status] ?? statusMeta["nao-iniciado"];
                         return (
-                          <div key={a.id} className="border border-certifica-200 rounded-[4px] p-2.5">
+                          <div key={v.id} className="border border-certifica-200 rounded-[4px] p-2.5">
                             <div className="flex items-center justify-between mb-1.5">
-                              <span className="text-[11.5px] text-certifica-dark" style={{ fontWeight: 600 }}>{a.companyName}</span>
-                              <DSBadge variant={st.variant}>{st.label}</DSBadge>
+                              <span className="text-[11.5px] text-certifica-dark" style={{ fontWeight: 600 }}>{v.cliente_nome}</span>
+                              <div className="flex items-center gap-1.5">
+                                <DSBadge variant={st.variant}>{st.label}</DSBadge>
+                                <button
+                                  onClick={() => handleRemove(v.id)}
+                                  className="text-certifica-500 hover:text-nao-conformidade transition-colors cursor-pointer"
+                                  title="Remover vínculo"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
                             </div>
                             <div className="flex items-center gap-3 text-[10px] text-certifica-500 mb-1.5">
-                              <span>Consultor: {a.consultant}</span>
-                              <span>Meta: {a.targetDate}</span>
+                              <span>Consultor: {v.consultor}</span>
+                              {v.data_meta && <span>Meta: {v.data_meta}</span>}
                             </div>
                             <div className="w-full bg-certifica-100 rounded-full h-1.5">
-                              <div className="bg-certifica-accent rounded-full h-1.5 transition-all" style={{ width: `${a.progress}%` }} />
+                              <div className="bg-certifica-accent rounded-full h-1.5 transition-all" style={{ width: `${v.progresso}%` }} />
                             </div>
-                            <div className="text-right text-[9px] text-certifica-500 mt-0.5">{a.progress}%</div>
+                            <div className="text-right text-[9px] text-certifica-500 mt-0.5">{v.progresso}%</div>
                           </div>
                         );
                       })}
@@ -693,7 +702,7 @@ export default function NormasPage() {
                 <label className="block text-[10px] text-certifica-500 mb-1" style={{ fontWeight: 600 }}>Empresa *</label>
                 <select value={assignForm.company} onChange={(e) => setAssignForm((p) => ({ ...p, company: e.target.value }))} className="w-full h-8 px-2 rounded-[4px] border border-certifica-200 text-[12px]">
                   <option value="">Selecione a empresa</option>
-                  {mockCompanies.map((c) => <option key={c} value={c}>{c}</option>)}
+                  {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome_fantasia}</option>)}
                 </select>
               </div>
               <div>
@@ -707,7 +716,7 @@ export default function NormasPage() {
                 <label className="block text-[10px] text-certifica-500 mb-1" style={{ fontWeight: 600 }}>Consultor responsável *</label>
                 <select value={assignForm.consultant} onChange={(e) => setAssignForm((p) => ({ ...p, consultant: e.target.value }))} className="w-full h-8 px-2 rounded-[4px] border border-certifica-200 text-[12px]">
                   <option value="">Selecione o consultor</option>
-                  {consultants.map((c) => <option key={c} value={c}>{c}</option>)}
+                  {consultores.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
@@ -717,7 +726,9 @@ export default function NormasPage() {
             </div>
             <div className="px-4 py-3 border-t border-certifica-200 flex justify-end gap-2">
               <DSButton variant="outline" size="sm" onClick={() => setShowAssignModal(false)}>Cancelar</DSButton>
-              <DSButton size="sm" onClick={handleAssign}>Vincular</DSButton>
+              <DSButton size="sm" onClick={handleAssign} disabled={saving}>
+                {saving ? <><RefreshCw className="w-3 h-3 animate-spin mr-1" /> Salvando...</> : "Vincular"}
+              </DSButton>
             </div>
           </div>
         </div>

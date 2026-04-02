@@ -1351,7 +1351,7 @@ function NewProjectModal({
                 </div>
                 <div className="space-y-2">
                   {entregaveis.map((ent, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
+                    <div key={`ent-${idx}-${ent.slice(0, 8)}`} className="flex items-center gap-2">
                       <span className="text-[10px] text-certifica-500 font-mono flex-shrink-0 w-5 text-right" style={{ fontWeight: 500 }}>
                         {String(idx + 1).padStart(2, "0")}
                       </span>

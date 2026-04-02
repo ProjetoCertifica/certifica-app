@@ -33,11 +33,12 @@ export type Database = {
           cidade: string;
           uf: string;
           consultor_responsavel: string;
+          logo_url: string | null;
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<Database["public"]["Tables"]["clientes"]["Row"], "id" | "created_at" | "updated_at">;
-        Update: Partial<Database["public"]["Tables"]["clientes"]["Insert"]>;
+        Insert: Omit<Database["public"]["Tables"]["clientes"]["Row"], "id" | "logo_url" | "created_at" | "updated_at"> & { logo_url?: string | null };
+        Update: Partial<Database["public"]["Tables"]["clientes"]["Insert"]> & { logo_url?: string | null };
       };
 
       /* ── Projetos ─────────────────────────────────────── */
@@ -574,6 +575,66 @@ export type Database = {
         Insert: { phone: string; created_at?: string };
         Update: Partial<Database["public"]["Tables"]["deleted_chats"]["Row"]>;
       };
+
+      /* ── Chat Conversations ────────────────────────────── */
+      chat_conversations: {
+        Row: {
+          id: string;
+          titulo: string;
+          cliente_id: string | null;
+          projeto_id: string | null;
+          participantes: string[];
+          status: "ativo" | "arquivado";
+          ultima_mensagem: string;
+          ultima_mensagem_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["chat_conversations"]["Row"], "id" | "created_at" | "updated_at">;
+        Update: Partial<Database["public"]["Tables"]["chat_conversations"]["Insert"]>;
+      };
+
+      /* ── Chat Messages ─────────────────────────────────── */
+      chat_messages: {
+        Row: {
+          id: string;
+          conversation_id: string;
+          autor: string;
+          conteudo: string;
+          tipo: "mensagem" | "evidencia" | "urgente" | "bloqueio" | "duvida";
+          classificacao: "geral" | "duvida" | "evidencia" | "urgencia" | "bloqueio";
+          arquivo_url: string | null;
+          arquivo_nome: string | null;
+          lida: boolean;
+          created_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["chat_messages"]["Row"], "id" | "created_at">;
+        Update: Partial<Database["public"]["Tables"]["chat_messages"]["Insert"]>;
+      };
+
+      /* ── Faturamento ───────────────────────────────────── */
+      faturamento: {
+        Row: {
+          id: string;
+          projeto_id: string | null;
+          cliente_id: string | null;
+          consultor: string;
+          numero_nf: string;
+          descricao: string;
+          valor: number;
+          data_emissao: string;
+          data_vencimento: string | null;
+          data_pagamento: string | null;
+          status: string;
+          tipo: string;
+          mes_competencia: string;
+          observacoes: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["faturamento"]["Row"], "id" | "created_at" | "updated_at">;
+        Update: Partial<Database["public"]["Tables"]["faturamento"]["Insert"]>;
+      };
     };
 
     Views: Record<string, never>;
@@ -684,3 +745,15 @@ export type AgentPauseUpdate = Database["public"]["Tables"]["agent_pauses"]["Upd
 
 export type DeletedChat = Database["public"]["Tables"]["deleted_chats"]["Row"];
 export type DeletedChatInsert = Database["public"]["Tables"]["deleted_chats"]["Insert"];
+
+export type ChatConversation = Database["public"]["Tables"]["chat_conversations"]["Row"];
+export type ChatConversationInsert = Database["public"]["Tables"]["chat_conversations"]["Insert"];
+export type ChatConversationUpdate = Database["public"]["Tables"]["chat_conversations"]["Update"];
+
+export type ChatMessageRow = Database["public"]["Tables"]["chat_messages"]["Row"];
+export type ChatMessageInsert = Database["public"]["Tables"]["chat_messages"]["Insert"];
+export type ChatMessageUpdate = Database["public"]["Tables"]["chat_messages"]["Update"];
+
+export type FaturamentoRow = Database["public"]["Tables"]["faturamento"]["Row"];
+export type FaturamentoInsertRow = Database["public"]["Tables"]["faturamento"]["Insert"];
+export type FaturamentoUpdateRow = Database["public"]["Tables"]["faturamento"]["Update"];

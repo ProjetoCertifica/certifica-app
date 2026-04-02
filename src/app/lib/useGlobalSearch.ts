@@ -45,8 +45,8 @@ export function useGlobalSearch() {
               .limit(5),
             supabase
               .from("documents")
-              .select("id, titulo, tipo_documento, cliente_id")
-              .or(`titulo.ilike.${pattern},tipo_documento.ilike.${pattern}`)
+              .select("id, titulo, tipo, cliente_id")
+              .or(`titulo.ilike.${pattern},tipo.ilike.${pattern}`)
               .limit(5),
             supabase
               .from("audits")
@@ -90,7 +90,7 @@ export function useGlobalSearch() {
               id: d.id,
               type: "documento",
               title: d.titulo,
-              subtitle: d.tipo_documento || "Documento",
+              subtitle: d.tipo || "Documento",
               path: "/documentos",
             });
           }

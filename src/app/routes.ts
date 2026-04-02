@@ -25,6 +25,7 @@ import ContatoPerfilPage from "./pages/ContatoPerfilPage";
 import ChatbotConfigPage from "./pages/ChatbotConfigPage";
 import ConsultoresPage from "./pages/ConsultoresPage";
 import FinanceiroPage from "./pages/FinanceiroPage";
+import PropostasPage from "./pages/PropostasPage";
 
 export const router = createBrowserRouter([
   // Public route — no layout
@@ -55,6 +56,7 @@ export const router = createBrowserRouter([
       { path: "treinamentos", Component: TreinamentosPage },
       { path: "consultores", Component: ConsultoresPage },
       { path: "financeiro", Component: FinanceiroPage },
+      { path: "propostas", Component: PropostasPage },
 
       { path: "relatorios", Component: RelatoriosPage },
       { path: "configuracoes", Component: ConfiguracoesPage },

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
+import { toast } from "sonner";
 import { supabase } from "../lib/supabase";
 import { useCliente360 } from "../lib/useCliente360";
 import { useContatos } from "../lib/useContatos";
@@ -79,16 +80,17 @@ function CompanyAvatar({ name, id, logoUrl, onLogoChange }: { name: string; id: 
     try {
       const path = `logos/${id}`;
       const { error: uploadErr } = await supabase.storage
-        .from("Certifica Arquivos")
+        .from("avatars")
         .upload(path, file, { upsert: true, contentType: file.type });
       if (uploadErr) throw uploadErr;
-      const { data: urlData } = supabase.storage.from("Certifica Arquivos").getPublicUrl(path);
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
       const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
       await supabase.from("clientes").update({ logo_url: publicUrl }).eq("id", id);
       setLocalUrl(publicUrl);
       onLogoChange(publicUrl);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Upload error:", err);
+      toast.error(err?.message ?? "Erro ao fazer upload da imagem.");
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
