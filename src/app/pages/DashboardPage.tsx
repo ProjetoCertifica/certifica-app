@@ -401,7 +401,7 @@ Responda APENAS com as 3 recomendações, uma por linha, sem numeração ou bull
   }
 
   return (
-    <div className="p-5 space-y-4">
+    <div className="p-5 space-y-4 certifica-page-enter">
       {/* Header */}
       <div className="flex items-end justify-between">
         <div>
@@ -880,7 +880,7 @@ Responda APENAS com as 3 recomendações, uma por linha, sem numeração ou bull
       {/* ── KPI Drill-down Modal ── */}
       {selectedKpi && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-certifica-dark/45" onClick={() => setSelectedKpi(null)} />
+          <div className="absolute inset-0 bg-certifica-dark/45 certifica-modal-backdrop" onClick={() => setSelectedKpi(null)} />
           <div className="relative w-full max-w-[860px] bg-white border border-certifica-200 rounded-[6px] shadow-[0_12px_40px_rgba(14,42,71,0.18)] certifica-modal-content">
             <div className="px-4 py-3 border-b border-certifica-200 flex items-center justify-between">
               <h3 className="text-[15px] text-certifica-900" style={{ fontWeight: 600 }}>Drill-down: {drillTitle}</h3>
@@ -953,7 +953,7 @@ Responda APENAS com as 3 recomendações, uma por linha, sem numeração ou bull
       {/* ── Project Detail Modal ── */}
       {detailProject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-certifica-dark/45" onClick={() => setDetailProject(null)} />
+          <div className="absolute inset-0 bg-certifica-dark/45 certifica-modal-backdrop" onClick={() => setDetailProject(null)} />
           <div className="relative w-full max-w-[600px] bg-white border border-certifica-200 rounded-[6px] shadow-[0_12px_40px_rgba(14,42,71,0.18)] certifica-modal-content">
             <div className="px-4 py-3 border-b border-certifica-200 flex items-center justify-between">
               <h3 className="text-[15px] text-certifica-900" style={{ fontWeight: 600 }}>{detailProject.codigo} — {detailProject.titulo}</h3>
@@ -986,7 +986,7 @@ Responda APENAS com as 3 recomendações, uma por linha, sem numeração ou bull
       {/* ── New Project Modal ── */}
       {showNewProject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-certifica-dark/45" onClick={() => setShowNewProject(false)} />
+          <div className="absolute inset-0 bg-certifica-dark/45 certifica-modal-backdrop" onClick={() => setShowNewProject(false)} />
           <div className="relative w-full max-w-[520px] bg-white border border-certifica-200 rounded-[6px] shadow-[0_12px_40px_rgba(14,42,71,0.18)] certifica-modal-content">
             <div className="px-4 py-3 border-b border-certifica-200 flex items-center justify-between">
               <h3 className="text-[15px] text-certifica-900" style={{ fontWeight: 600 }}>Novo Projeto</h3>

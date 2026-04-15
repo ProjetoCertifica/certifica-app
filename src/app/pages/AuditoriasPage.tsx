@@ -344,7 +344,7 @@ export default function AuditoriasPage() {
   };
 
   return (
-    <div className="p-5 space-y-4">
+    <div className="p-5 space-y-4 certifica-page-enter">
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 rounded-[4px] px-3 py-2 text-[12px]">
           {error}
@@ -828,7 +828,7 @@ export default function AuditoriasPage() {
       {isRaiModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
-            className="absolute inset-0 bg-certifica-dark/45"
+            className="absolute inset-0 bg-certifica-dark/45 certifica-modal-backdrop"
             onClick={() => setIsRaiModalOpen(false)}
           />
           <div className="relative w-full max-w-[920px] bg-white border border-certifica-200 rounded-[6px] shadow-[0_12px_40px_rgba(14,42,71,0.18)] certifica-modal-content">
@@ -1004,7 +1004,7 @@ export default function AuditoriasPage() {
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
-            className="absolute inset-0 bg-certifica-dark/45 backdrop-blur-sm"
+            className="absolute inset-0 bg-certifica-dark/45 backdrop-blur-sm certifica-modal-backdrop"
             onClick={() => { if (!isDeleting) { setDeleteTarget(null); } }}
           />
           <div className="relative w-full max-w-[400px] bg-white border border-certifica-200 rounded-[6px] shadow-[0_12px_40px_rgba(14,42,71,0.18)] certifica-modal-content p-6">
@@ -1083,8 +1083,8 @@ export default function AuditoriasPage() {
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-certifica-dark/45" onClick={() => setIs5W2HOpen(false)} />
-            <div className="relative w-full max-w-[640px] bg-white border border-certifica-200 rounded-[6px] shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="absolute inset-0 bg-certifica-dark/45 certifica-modal-backdrop" onClick={() => setIs5W2HOpen(false)} />
+            <div className="relative w-full max-w-[640px] bg-white border border-certifica-200 rounded-[6px] shadow-xl max-h-[90vh] overflow-y-auto certifica-modal-content">
               <div className="px-4 py-3 border-b border-certifica-200 flex items-center justify-between sticky top-0 bg-white z-10">
                 <div>
                   <div className="flex items-center gap-2">

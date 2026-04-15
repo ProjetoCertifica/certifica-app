@@ -475,7 +475,7 @@ export default function NormasPage() {
   }
 
   return (
-    <div className="p-5 space-y-4">
+    <div className="p-5 space-y-4 certifica-page-enter">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-certifica-900 text-lg" style={{ fontWeight: 700 }}>Painel de Normas</h2>

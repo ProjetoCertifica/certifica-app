@@ -26,10 +26,14 @@ import ChatbotConfigPage from "./pages/ChatbotConfigPage";
 import ConsultoresPage from "./pages/ConsultoresPage";
 import FinanceiroPage from "./pages/FinanceiroPage";
 import PropostasPage from "./pages/PropostasPage";
+import PropostaTestPage from "./pages/PropostaTestPage";
+import PropostasTestPage from "./pages/PropostasTestPage";
 
 export const router = createBrowserRouter([
   // Public route — no layout
   { path: "/login", Component: LoginPage },
+  { path: "/proposta-test", Component: PropostaTestPage },
+  { path: "/propostas-test", Component: PropostasTestPage },
 
   // Protected app routes — with layout
   {

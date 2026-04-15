@@ -263,7 +263,7 @@ export default function DocumentosPage() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row lg:h-full overflow-auto lg:overflow-hidden">
+    <div className="flex flex-col lg:flex-row lg:h-full overflow-auto lg:overflow-hidden certifica-page-enter">
       <div className="flex-1 flex flex-col overflow-hidden min-h-[380px] lg:min-h-0">
         <div className="px-5 pt-5 pb-0">
           <div className="flex items-center justify-between mb-4">

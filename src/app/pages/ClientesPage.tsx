@@ -336,7 +336,7 @@ export default function ClientesPage() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row lg:h-full overflow-auto lg:overflow-hidden">
+    <div className="flex flex-col lg:flex-row lg:h-full overflow-auto lg:overflow-hidden certifica-page-enter">
       {/* ── Main list ── */}
       <div className="flex-1 flex flex-col overflow-hidden min-h-[380px] lg:min-h-0">
         <div className="px-5 pt-5 pb-0">

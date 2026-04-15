@@ -384,8 +384,8 @@ export default function ReunioesPage() {
       {/* ── New Meeting Modal ── */}
       {showNewModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowNewModal(false)} />
-          <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-[520px] mx-4 animate-in zoom-in-95 fade-in duration-200">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm certifica-modal-backdrop" onClick={() => setShowNewModal(false)} />
+          <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-[520px] mx-4 certifica-modal-content">
             <div className="flex items-center justify-between px-5 py-4 border-b border-certifica-200">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-certifica-accent/10 rounded-lg flex items-center justify-center">

@@ -118,7 +118,7 @@ export default function ConsultoresPage() {
   }
 
   return (
-    <div className="p-5 space-y-4">
+    <div className="p-5 space-y-4 certifica-page-enter">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

@@ -1,14 +1,12 @@
 import { useState, useCallback } from "react";
 import {
-  getZApiStatus,
+  getStatus,
   sendText,
-  sendImage,
-  sendDocument,
+  sendMedia,
   sendAudio,
-  ZApiNotConfiguredError,
-  type ZApiStatus,
-  type ZApiSendResult,
-} from "./zapi";
+  type EvolutionStatus,
+  type EvolutionSendResult,
+} from "./evolution";
 
 export type WhatsAppSendKind = "text" | "image" | "document" | "audio";
 
@@ -22,13 +20,13 @@ export interface WhatsAppSendOptions {
 }
 
 export interface WhatsAppState {
-  status: ZApiStatus | null;
+  status: EvolutionStatus | null;
   statusLoading: boolean;
   statusError: string | null;
   configured: boolean;
   sending: boolean;
   sendError: string | null;
-  lastResult: ZApiSendResult | null;
+  lastResult: EvolutionSendResult | null;
 }
 
 export function useWhatsApp() {
@@ -42,11 +40,11 @@ export function useWhatsApp() {
     lastResult: null,
   });
 
-  /** Verifica conexão e status do WhatsApp */
+  /** Verifica conexão e status do WhatsApp via Evolution API */
   const checkStatus = useCallback(async () => {
     setState((prev) => ({ ...prev, statusLoading: true, statusError: null }));
     try {
-      const s = await getZApiStatus();
+      const s = await getStatus();
       setState((prev) => ({
         ...prev,
         status: s,
@@ -55,34 +53,33 @@ export function useWhatsApp() {
       }));
       return s;
     } catch (err) {
-      const isNotConfigured = err instanceof ZApiNotConfiguredError;
       const msg = err instanceof Error ? err.message : "Erro ao verificar status";
       setState((prev) => ({
         ...prev,
         status: null,
-        configured: !isNotConfigured,
+        configured: false,
         statusLoading: false,
-        statusError: isNotConfigured ? null : msg,
+        statusError: msg,
       }));
       return null;
     }
   }, []);
 
-  /** Envia mensagem via WhatsApp */
-  const send = useCallback(async (opts: WhatsAppSendOptions): Promise<ZApiSendResult | null> => {
+  /** Envia mensagem via Evolution API */
+  const send = useCallback(async (opts: WhatsAppSendOptions): Promise<EvolutionSendResult | null> => {
     if (!opts.phone) return null;
     setState((prev) => ({ ...prev, sending: true, sendError: null, lastResult: null }));
     try {
-      let result: ZApiSendResult;
+      let result: EvolutionSendResult;
       switch (opts.kind) {
         case "text":
           result = await sendText(opts.phone, opts.message ?? "");
           break;
         case "image":
-          result = await sendImage(opts.phone, opts.fileUrl ?? "", opts.caption);
+          result = await sendMedia(opts.phone, opts.fileUrl ?? "", "image", opts.caption);
           break;
         case "document":
-          result = await sendDocument(opts.phone, opts.fileUrl ?? "", opts.fileName ?? "documento.pdf", opts.caption);
+          result = await sendMedia(opts.phone, opts.fileUrl ?? "", "document", opts.caption, opts.fileName ?? "documento.pdf");
           break;
         case "audio":
           result = await sendAudio(opts.phone, opts.fileUrl ?? "");
@@ -93,10 +90,7 @@ export function useWhatsApp() {
       setState((prev) => ({ ...prev, sending: false, lastResult: result }));
       return result;
     } catch (err) {
-      const isNotConfigured = err instanceof ZApiNotConfiguredError;
-      const msg = isNotConfigured
-        ? "Z-API não configurado. Configure as credenciais em Configurações → Integrações."
-        : (err instanceof Error ? err.message : "Erro ao enviar mensagem");
+      const msg = err instanceof Error ? err.message : "Erro ao enviar mensagem";
       setState((prev) => ({ ...prev, sending: false, sendError: msg }));
       return null;
     }

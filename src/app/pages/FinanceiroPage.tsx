@@ -129,7 +129,7 @@ export default function FinanceiroPage() {
   }));
 
   return (
-    <div className="p-5 space-y-4">
+    <div className="p-5 space-y-4 certifica-page-enter">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -291,8 +291,8 @@ export default function FinanceiroPage() {
       {/* New NF Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-certifica-dark/45" onClick={() => setShowModal(false)} />
-          <div className="relative w-full max-w-[560px] bg-white border border-certifica-200 rounded-[6px] shadow-[0_12px_40px_rgba(14,42,71,0.18)] max-h-[85vh] overflow-y-auto">
+          <div className="absolute inset-0 bg-certifica-dark/45 certifica-modal-backdrop" onClick={() => setShowModal(false)} />
+          <div className="relative w-full max-w-[560px] bg-white border border-certifica-200 rounded-[6px] shadow-[0_12px_40px_rgba(14,42,71,0.18)] max-h-[85vh] overflow-y-auto certifica-modal-content">
             <div className="px-4 py-3 border-b border-certifica-200 flex items-center justify-between sticky top-0 bg-white z-10">
               <h3 className="text-[15px] text-certifica-900" style={{ fontWeight: 600 }}>Registrar Nota Fiscal</h3>
               <button onClick={() => setShowModal(false)} className="p-1 text-certifica-500/40 hover:text-certifica-700 cursor-pointer">

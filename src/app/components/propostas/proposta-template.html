@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Proposta 156-2026 — Heineken Brasil</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@page { size: A4 landscape; margin: 0; }
+@media print {
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { box-shadow: none !important; }
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; color: #1f2937; -webkit-font-smoothing: antialiased; }
+
+.page {
+  width: 297mm;
+  height: 210mm;
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+  page-break-after: always;
+  break-after: page;
+}
+.page:last-child { page-break-after: auto; break-after: auto; }
+
+@media screen {
+  body { background: #0d1b2a; padding: 10mm; }
+  .page { margin: 0 auto 12mm; box-shadow: 0 20px 80px rgba(0,0,0,0.5); }
+}
+
+/* ── COLORS ── */
+:root {
+  --navy: #0E2A47;
+  --blue: #1B6CA8;
+  --lblue: #2E9ED6;
+  --accent: #FFEB3B;
+  --bg: #EAECF0;
+  --bg-light: #F2F4F7;
+}
+
+/* ── ORGANIC CURVES (right side decoration — faithful to original) ── */
+.deco-curves {
+  position: absolute;
+  top: 0; right: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+}
+.deco-curves::before {
+  content: '';
+  position: absolute;
+  top: -60mm; right: -30mm;
+  width: 140mm; height: 180mm;
+  background: var(--navy);
+  border-radius: 0 0 0 80%;
+  opacity: 0.95;
+}
+.deco-curves::after {
+  content: '';
+  position: absolute;
+  top: 20mm; right: -50mm;
+  width: 120mm; height: 160mm;
+  background: var(--blue);
+  border-radius: 0 0 0 70%;
+  opacity: 0.85;
+}
+
+/* ── FOOTER (all pages) ── */
+.page-footer {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 12mm;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8mm;
+  z-index: 10;
+}
+.footer-logo { height: 7mm; object-fit: contain; }
+.footer-badges { display: flex; gap: 2mm; align-items: center; }
+.footer-badge {
+  width: 8mm; height: 8mm; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 6.5px; font-weight: 800; color: #fff; line-height: 1;
+}
+.footer-qr {
+  width: 14mm; height: 14mm;
+  background: #e5e7eb;
+  border-radius: 1mm;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 7px; color: #999;
+}
+
+/* ── CHECK ICON ── */
+.check-icon {
+  width: 5mm; height: 5mm;
+  background: var(--blue);
+  border-radius: 1mm;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  margin-right: 2mm;
+  vertical-align: middle;
+}
+.check-icon svg { width: 3mm; height: 3mm; }
+
+/* ── SECTION HEADER (blue bar) ── */
+.section-header {
+  background: linear-gradient(90deg, var(--navy) 0%, var(--blue) 100%);
+  color: #fff;
+  padding: 3mm 6mm;
+  font-size: 16px;
+  font-weight: 800;
+  display: inline-block;
+  border-radius: 0 2mm 2mm 0;
+  margin-bottom: 4mm;
+}
+</style>
+</head>
+<body>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE 1 — CAPA
+═══════════════════════════════════════════════════════════ -->
+<div class="page" style="background: var(--bg);">
+
+  <!-- Cover photo right side -->
+  <div style="position:absolute; top:0; right:0; width:52%; height:100%; overflow:hidden;">
+    <img src="/cover-photo.jpg"
+      style="width:100%; height:100%; object-fit:cover; object-position:center top;"
+      alt="" onerror="this.parentElement.style.background='var(--blue)'" />
+    <!-- Fade to bg -->
+    <div style="position:absolute; inset:0;
+      background: linear-gradient(90deg, var(--bg) 0%, var(--bg) 3%, transparent 25%);"></div>
+    <div style="position:absolute; inset:0;
+      background: linear-gradient(180deg, rgba(14,42,71,0.15) 0%, transparent 25%, rgba(14,42,71,0.2) 100%);"></div>
+  </div>
+
+  <!-- Organic curve decorations (top-right, like original) -->
+  <svg style="position:absolute; top:0; right:0; width:65%; height:100%; pointer-events:none;" viewBox="0 0 600 400" preserveAspectRatio="xMaxYMin slice">
+    <path d="M600 0 L600 400 Q520 380 480 300 Q440 220 460 120 Q480 40 540 0 Z" fill="#0E2A47" opacity="0.85"/>
+    <path d="M600 0 L600 350 Q550 320 530 250 Q510 180 525 100 Q540 30 580 0 Z" fill="#1B6CA8" opacity="0.75"/>
+  </svg>
+
+  <!-- Logo top-left -->
+  <div style="position:absolute; top:8mm; left:8mm;">
+    <img src="/logo-certifica-oficial.png" style="height:12mm; object-fit:contain;"
+      alt="Certifica" onerror="this.outerHTML='<div style=\'font-size:18px;font-weight:900;color:#0E2A47;\'>Certifica&reg;</div>'" />
+  </div>
+
+  <!-- Main text -->
+  <div style="position:absolute; top:0; left:0; width:52%; height:100%;
+    display:flex; flex-direction:column; justify-content:center; padding:0 10mm 20mm 8mm;">
+    <div style="font-size:32px; font-weight:900; color:var(--navy); line-height:1.05;
+      letter-spacing:-0.03em; font-style:italic; margin-bottom:4mm;">
+      O FUTURO DA SUA EMPRESA<br>COM A GENTE !
+    </div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); font-style:italic; margin-bottom:3mm;">
+      Mais do que uma proposta, uma decisao estrategica
+    </div>
+    <div style="font-size:12px; color:#4a5568; line-height:1.6;">
+      Referencia em gestao para empresas que buscam excelencia.
+    </div>
+  </div>
+
+  <!-- Bottom: +20 anos + badges -->
+  <div style="position:absolute; bottom:14mm; left:8mm; display:flex; align-items:center; gap:5mm;">
+    <div style="width:24mm; height:24mm; border-radius:50%; background:var(--navy);
+      border:1.5px solid rgba(255,235,59,0.4);
+      display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+      <div style="font-size:16px; font-weight:900; color:var(--accent); line-height:1;">+20</div>
+      <div style="font-size:6px; font-weight:700; color:rgba(255,255,255,0.8);
+        letter-spacing:0.04em; text-transform:uppercase; margin-top:1mm; line-height:1.2;">
+        ANOS DE<br>EXPERIENCIA<br>EM GESTAO DE<br>SISTEMAS
+      </div>
+    </div>
+    <div style="display:flex; gap:2.5mm;">
+      <div class="footer-badge" style="background:#4CAF50; width:9mm; height:9mm; font-size:7px;">9001</div>
+      <div class="footer-badge" style="background:#2196F3; width:9mm; height:9mm; font-size:7px;">14001</div>
+      <div class="footer-badge" style="background:#1B6CA8; width:9mm; height:9mm; font-size:7px;">45001</div>
+      <div class="footer-badge" style="background:#1B5E20; width:9mm; height:9mm; font-size:6px; line-height:1.1;">2030</div>
+      <div class="footer-badge" style="background:#6A1B9A; width:9mm; height:9mm; font-size:6px; line-height:1.1;">LGPD</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE 2 — IDENTIFICACAO (VARIABLE)
+═══════════════════════════════════════════════════════════ -->
+<div class="page" style="background: var(--bg-light);">
+
+  <!-- Organic curves top-right -->
+  <svg style="position:absolute; top:0; right:0; width:50%; height:70%; pointer-events:none;" viewBox="0 0 400 300" preserveAspectRatio="xMaxYMin slice">
+    <path d="M400 0 L400 300 Q340 260 310 190 Q280 120 310 50 Q340 0 400 0 Z" fill="#0E2A47" opacity="0.08"/>
+    <path d="M400 0 L400 250 Q365 220 350 160 Q335 100 355 40 Q375 0 400 0 Z" fill="#1B6CA8" opacity="0.12"/>
+  </svg>
+
+  <!-- Title + date -->
+  <div style="position:absolute; top:14mm; left:10mm;">
+    <div style="font-size:30px; font-weight:800; color:var(--navy); letter-spacing:-0.03em;">Proposta 156-2026</div>
+    <div style="font-size:12px; color:#6b7280; margin-top:2mm;">Sorocaba, 09 de abril de 2026</div>
+  </div>
+
+  <!-- Scope seal (bottom-left) -->
+  <div style="position:absolute; bottom:20mm; left:10mm;">
+    <div style="width:52mm; height:52mm; border-radius:50%; border:3px solid var(--navy);
+      background:white; box-shadow:0 4px 20px rgba(14,42,71,0.12);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      text-align:center; padding:5mm;">
+      <div style="font-size:10px; font-weight:800; color:var(--navy); text-transform:uppercase;
+        letter-spacing:0.04em; line-height:1.4;">
+        IMPLEMENTACAO<br>ISO 14001:2015
+      </div>
+      <div style="width:10mm; height:0.5px; background:var(--blue); margin:2mm 0;"></div>
+      <div style="font-size:10px; color:var(--blue); font-weight:700;">ISO 14001:2015</div>
+    </div>
+  </div>
+
+  <!-- Checkmarks (right side) -->
+  <div style="position:absolute; top:50%; left:50%; transform:translate(-10%, -50%);
+    display:flex; flex-direction:column; gap:8mm;">
+    <!-- Escopo -->
+    <div style="display:flex; align-items:flex-start; gap:3mm;">
+      <div style="width:7mm; height:7mm; background:var(--blue); border-radius:1.5mm;
+        display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1mm;">
+        <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div style="font-size:10px; font-weight:700; color:var(--blue); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:1mm;">Escopo:</div>
+        <div style="font-size:15px; font-weight:700; color:var(--navy); line-height:1.3; max-width:120mm;">
+          Implementacao ISO 14001:2015 - Sistema de Gestao Ambiental
+        </div>
+      </div>
+    </div>
+    <!-- Empresa -->
+    <div style="display:flex; align-items:flex-start; gap:3mm;">
+      <div style="width:7mm; height:7mm; background:var(--blue); border-radius:1.5mm;
+        display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1mm;">
+        <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div style="font-size:10px; font-weight:700; color:var(--blue); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:1mm;">Empresa:</div>
+        <div style="font-size:18px; font-weight:800; color:var(--navy);">Heineken Brasil</div>
+      </div>
+    </div>
+    <!-- Contato -->
+    <div style="display:flex; align-items:flex-start; gap:3mm;">
+      <div style="width:7mm; height:7mm; background:var(--blue); border-radius:1.5mm;
+        display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1mm;">
+        <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div style="font-size:10px; font-weight:700; color:var(--blue); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:1mm;">Contatos:</div>
+        <div style="font-size:15px; font-weight:700; color:var(--navy);">Carlos Silva</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="page-footer">
+    <img src="/logo-certifica-oficial.png" class="footer-logo" alt="Certifica" onerror="this.style.display='none'" />
+    <div class="footer-badges">
+      <div class="footer-badge" style="background:#4CAF50;">9001</div>
+      <div class="footer-badge" style="background:#2196F3;">14001</div>
+      <div class="footer-badge" style="background:#1B6CA8;">45001</div>
+      <div class="footer-badge" style="background:#1B5E20; font-size:5.5px;">2030</div>
+      <div class="footer-badge" style="background:#6A1B9A; font-size:5.5px;">LGPD</div>
+    </div>
+    <div class="footer-qr">QR</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE 3 — SOBRE A CERTIFICA (FIXED)
+═══════════════════════════════════════════════════════════ -->
+<div class="page" style="background: var(--bg);">
+  <!-- Curves right -->
+  <svg style="position:absolute; top:0; right:0; width:45%; height:100%; pointer-events:none;" viewBox="0 0 400 500" preserveAspectRatio="xMaxYMid slice">
+    <path d="M400 0 L400 500 Q300 450 270 350 Q240 250 270 150 Q300 50 380 0 Z" fill="#1B6CA8" opacity="0.55"/>
+    <path d="M400 50 L400 500 Q340 440 320 350 Q300 260 320 170 Q340 80 400 50 Z" fill="#2E9ED6" opacity="0.45"/>
+  </svg>
+
+  <div style="position:absolute; top:14mm; left:10mm; right:52%; bottom:18mm;">
+    <div style="font-size:12px; color:#6b7280; font-style:italic; margin-bottom:1mm;">Um pouco sobre a</div>
+    <div style="font-size:28px; font-weight:900; color:var(--navy); letter-spacing:-0.03em; line-height:1.1;">
+      <span style="font-weight:800;">Certifica</span> <span style="color:var(--blue);">Gestao de Sistemas</span>
+    </div>
+    <p style="font-size:12px; color:#374151; line-height:1.7; margin-top:5mm;">
+      A Certifica possui em seu quadro de colaboradores, profissionais com mais de 20 anos de experiencia.
+      Atuamos em todas as areas da gestao - <strong>qualidade, meio ambiente, saude e seguranca,
+      eficiencia energetica, qualidade automotiva, ESG</strong>, etc.
+    </p>
+    <div style="margin-top:8mm;">
+      <div style="font-size:24px; font-weight:900; color:var(--navy); letter-spacing:-0.02em; margin-bottom:3mm;">
+        <span style="font-weight:800;">Experiencia</span> <span style="color:var(--blue); font-style:italic;">comprovada</span>
+      </div>
+      <p style="font-size:12px; color:#374151; line-height:1.7;">
+        Temos <strong>mais de 735 empresas</strong> auditadas e certificadas em todo o mundo.
+        Atraves desse know-how diferenciado, levamos as empresas a capacidade de implementar
+        sistemas de gestao com muita eficiencia e eficacia, com resultados rapidos e consistentes.
+      </p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="page-footer">
+    <img src="/logo-certifica-oficial.png" class="footer-logo" alt="Certifica" onerror="this.style.display='none'" />
+    <div class="footer-badges">
+      <div class="footer-badge" style="background:#4CAF50;">9001</div>
+      <div class="footer-badge" style="background:#2196F3;">14001</div>
+      <div class="footer-badge" style="background:#1B6CA8;">45001</div>
+      <div class="footer-badge" style="background:#1B5E20; font-size:5.5px;">2030</div>
+      <div class="footer-badge" style="background:#6A1B9A; font-size:5.5px;">LGPD</div>
+    </div>
+    <div class="footer-qr">QR</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE 4 — 5 CERTIFICADOS (FIXED)
+═══════════════════════════════════════════════════════════ -->
+<div class="page" style="background: var(--bg);">
+  <div style="position:absolute; top:10mm; left:0; right:0; text-align:center;">
+    <div style="font-size:22px; font-weight:900; color:var(--navy); letter-spacing:-0.02em;">
+      Primeira Empresa de Consultoria do Brasil a conquistar 5 Certificados
+    </div>
+  </div>
+  <!-- 5 certificate frames (3 top + 2 bottom, like original) -->
+  <div style="position:absolute; top:28mm; left:12mm; right:12mm; bottom:18mm;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5mm;">
+    <!-- Row 1: 3 certificates -->
+    <div style="display:flex; gap:6mm; justify-content:center;">
+      <div style="width:72mm; height:55mm; background:white; border:3px solid #333; border-radius:1mm; box-shadow:2px 3px 10px rgba(0,0,0,0.15); display:flex; align-items:center; justify-content:center; text-align:center; padding:4mm;">
+        <div><div style="font-size:12px; font-weight:800; color:var(--navy);">ISO 9001:2015</div><div style="font-size:10px; color:#6b7280; margin-top:2mm;">Sistema de Gestao da Qualidade</div></div>
+      </div>
+      <div style="width:72mm; height:55mm; background:white; border:3px solid #333; border-radius:1mm; box-shadow:2px 3px 10px rgba(0,0,0,0.15); display:flex; align-items:center; justify-content:center; text-align:center; padding:4mm;">
+        <div><div style="font-size:12px; font-weight:800; color:var(--navy);">ISO 14001:2015</div><div style="font-size:10px; color:#6b7280; margin-top:2mm;">Sistema de Gestao Ambiental</div></div>
+      </div>
+      <div style="width:72mm; height:55mm; background:white; border:3px solid #333; border-radius:1mm; box-shadow:2px 3px 10px rgba(0,0,0,0.15); display:flex; align-items:center; justify-content:center; text-align:center; padding:4mm;">
+        <div><div style="font-size:12px; font-weight:800; color:var(--navy);">ISO 45001:2018</div><div style="font-size:10px; color:#6b7280; margin-top:2mm;">Saude e Seguranca Ocupacional</div></div>
+      </div>
+    </div>
+    <!-- Row 2: 2 certificates -->
+    <div style="display:flex; gap:6mm; justify-content:center;">
+      <div style="width:72mm; height:55mm; background:white; border:3px solid #333; border-radius:1mm; box-shadow:2px 3px 10px rgba(0,0,0,0.15); display:flex; align-items:center; justify-content:center; text-align:center; padding:4mm;">
+        <div><div style="font-size:12px; font-weight:800; color:var(--navy);">NBR 16001</div><div style="font-size:10px; color:#6b7280; margin-top:2mm;">Responsabilidade Social</div></div>
+      </div>
+      <div style="width:72mm; height:55mm; background:white; border:3px solid #333; border-radius:1mm; box-shadow:2px 3px 10px rgba(0,0,0,0.15); display:flex; align-items:center; justify-content:center; text-align:center; padding:4mm;">
+        <div><div style="font-size:12px; font-weight:800; color:var(--navy);">FSSC 22000</div><div style="font-size:10px; color:#6b7280; margin-top:2mm;">Seguranca de Alimentos</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <img src="/logo-certifica-oficial.png" class="footer-logo" alt="Certifica" onerror="this.style.display='none'" />
+    <div class="footer-badges">
+      <div class="footer-badge" style="background:#4CAF50;">9001</div>
+      <div class="footer-badge" style="background:#2196F3;">14001</div>
+      <div class="footer-badge" style="background:#1B6CA8;">45001</div>
+      <div class="footer-badge" style="background:#1B5E20; font-size:5.5px;">2030</div>
+      <div class="footer-badge" style="background:#6A1B9A; font-size:5.5px;">LGPD</div>
+    </div>
+    <div class="footer-qr">QR</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE 5 — SOLUCOES EMPRESARIAIS (FIXED)
+═══════════════════════════════════════════════════════════ -->
+<div class="page" style="background: var(--bg);">
+  <!-- Background photo (ghosted, like original) -->
+  <div style="position:absolute; inset:0; background:linear-gradient(rgba(234,236,240,0.85), rgba(234,236,240,0.85));"></div>
+
+  <div style="position:relative; z-index:2; padding:12mm 10mm;">
+    <div style="font-size:24px; font-weight:900; color:var(--navy); font-style:italic; margin-bottom:1mm;">Solucoes empresariais</div>
+    <div style="font-size:11px; color:#6b7280; margin-bottom:10mm;">Consultorias, Auditorias &amp; Treinamentos</div>
+
+    <!-- 3 blue cards (like original) -->
+    <div style="display:flex; gap:5mm; margin-top:6mm;">
+      <div style="flex:1; background:var(--blue); border-radius:3mm; padding:6mm; color:white; min-height:80mm; display:flex; flex-direction:column;">
+        <div style="font-size:14px; font-weight:800; text-align:center; margin-bottom:4mm;">Treinamentos e<br>Aperfeicoamentos</div>
+        <p style="font-size:10px; line-height:1.6; text-align:center; opacity:0.9;">
+          Oferecemos cursos especializados em diversos temas, incluindo Sistemas de Gestao (ISO), Lean Six Sigma Green Belt,
+          Lean Six Sigma Black Belt, ESG, 5S, PDCA, Auditorias e muito mais.
+        </p>
+      </div>
+      <div style="flex:1; background:var(--blue); border-radius:3mm; padding:6mm; color:white; min-height:80mm; display:flex; flex-direction:column;">
+        <div style="font-size:14px; font-weight:800; text-align:center; margin-bottom:4mm;">Lean Manufacturing e<br>Core Tools</div>
+        <p style="font-size:10px; line-height:1.6; text-align:center; opacity:0.9;">
+          O Lean Manufacturing e um sistema de Gestao que busca eliminar desperdicios e otimizar processos.
+          Com ele e possivel reduzir custos e oferecer produtos de qualidade superior.
+        </p>
+      </div>
+      <div style="flex:1; background:var(--blue); border-radius:3mm; padding:6mm; color:white; min-height:80mm; display:flex; flex-direction:column;">
+        <div style="font-size:14px; font-weight:800; text-align:center; margin-bottom:4mm;">SIG - Sistemas Integrados de<br>Gestao (Consultoria &amp; Auditorias)</div>
+        <p style="font-size:10px; line-height:1.6; text-align:center; opacity:0.9;">
+          Consultoria, Auditoria e Treinamento em Sistemas de Gestao da Qualidade, Seguranca de Alimentos,
+          Meio Ambiente, Saude e Seguranca, Responsabilidade Social, Qualidade Automotiva, etc.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-footer" style="z-index:3;">
+    <img src="/logo-certifica-oficial.png" class="footer-logo" alt="Certifica" onerror="this.style.display='none'" />
+    <div class="footer-badges">
+      <div class="footer-badge" style="background:#4CAF50;">9001</div>
+      <div class="footer-badge" style="background:#2196F3;">14001</div>
+      <div class="footer-badge" style="background:#1B6CA8;">45001</div>
+      <div class="footer-badge" style="background:#1B5E20; font-size:5.5px;">2030</div>
+      <div class="footer-badge" style="background:#6A1B9A; font-size:5.5px;">LGPD</div>
+    </div>
+    <div class="footer-qr">QR</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGES 6-8 — CLIENTES (FIXED) — 3 grids of logos
+═══════════════════════════════════════════════════════════ -->
+<div class="page" style="background: var(--bg);">
+  <div style="padding:12mm 10mm 18mm;">
+    <div style="font-size:24px; font-weight:900; color:var(--navy); font-style:italic; margin-bottom:1mm;">Alguns clientes</div>
+    <div style="font-size:11px; color:#6b7280; margin-bottom:6mm;">Consultorias, Auditorias &amp; Treinamentos</div>
+    <div style="display:grid; grid-template-columns:repeat(8,1fr); gap:3mm;">
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:800; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">ADIMAX</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">ambev</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Aptar</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">amcor</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">APEX Tools</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:#e11d48; min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Heineken</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:9px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Sorocaba Refrescos</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:#16a34a; min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Unimed</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:#dc2626; min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Campari</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:800; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">CNH Industrial</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Cipatex</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:800; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">DANA</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--blue); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Embraer</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Moura</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:#dc2626; min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">FEMSA</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Toyota</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:800; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Scania</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Clarios</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:9px; font-weight:700; color:#dc2626; min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Canon Medical</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--blue); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">OMRON</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:#16a34a; min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Kerry</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:9px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Toyota TTSR</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--blue); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Nextracker</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Schaeffler</div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <img src="/logo-certifica-oficial.png" class="footer-logo" alt="Certifica" onerror="this.style.display='none'" />
+    <div class="footer-badges">
+      <div class="footer-badge" style="background:#4CAF50;">9001</div>
+      <div class="footer-badge" style="background:#2196F3;">14001</div>
+      <div class="footer-badge" style="background:#1B6CA8;">45001</div>
+      <div class="footer-badge" style="background:#1B5E20; font-size:5.5px;">2030</div>
+      <div class="footer-badge" style="background:#6A1B9A; font-size:5.5px;">LGPD</div>
+    </div>
+    <div class="footer-qr">QR</div>
+  </div>
+</div>
+
+<!-- PAGE 7 — CLIENTES 2 -->
+<div class="page" style="background: var(--bg);">
+  <div style="padding:12mm 10mm 18mm;">
+    <div style="font-size:24px; font-weight:900; color:var(--navy); font-style:italic; margin-bottom:1mm;">Alguns clientes</div>
+    <div style="font-size:11px; color:#6b7280; margin-bottom:6mm;">Consultorias, Auditorias &amp; Treinamentos</div>
+    <div style="display:grid; grid-template-columns:repeat(8,1fr); gap:3mm;">
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">ASVO</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:#dc2626; min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Carsten</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:9px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Deltha Wind</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">De Nora</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:800; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">GRACE</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--blue); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Sanson</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:#16a34a; min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Salmeron</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Guiguel</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">B-Wind</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">NFL Brasil</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:9px; font-weight:700; color:var(--blue); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Johnson Controls</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Parafix</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Polyexcel</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Silgan</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:9px; font-weight:700; color:#ea580c; min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Special Dog</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--blue); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Valmet</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Vuteq</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:9px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Ouro Safra</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--blue); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">SPIC Brasil</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Vip</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:#16a34a; min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Frosty</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Gualapack</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">SPX Flow</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Aerojet</div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <img src="/logo-certifica-oficial.png" class="footer-logo" alt="Certifica" onerror="this.style.display='none'" />
+    <div class="footer-badges">
+      <div class="footer-badge" style="background:#4CAF50;">9001</div>
+      <div class="footer-badge" style="background:#2196F3;">14001</div>
+      <div class="footer-badge" style="background:#1B6CA8;">45001</div>
+      <div class="footer-badge" style="background:#1B5E20; font-size:5.5px;">2030</div>
+      <div class="footer-badge" style="background:#6A1B9A; font-size:5.5px;">LGPD</div>
+    </div>
+    <div class="footer-qr">QR</div>
+  </div>
+</div>
+
+<!-- PAGE 8 — CLIENTES 3 -->
+<div class="page" style="background: var(--bg);">
+  <div style="padding:12mm 10mm 18mm;">
+    <div style="font-size:24px; font-weight:900; color:var(--navy); font-style:italic; margin-bottom:1mm;">Alguns clientes</div>
+    <div style="font-size:11px; color:#6b7280; margin-bottom:6mm;">Consultorias, Auditorias &amp; Treinamentos</div>
+    <div style="display:grid; grid-template-columns:repeat(8,1fr); gap:3mm;">
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Metalfrio</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Sancor</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">TSTH</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--blue); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Flex</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Reckitt</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Metso</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:#dc2626; min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Comau</div>
+      <div style="background:white; border-radius:2mm; padding:3mm 2mm; display:flex; align-items:center; justify-content:center; text-align:center; font-size:10px; font-weight:700; color:var(--navy); min-height:16mm; box-shadow:0 1px 3px rgba(0,0,0,0.06);">Pirelli</div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <img src="/logo-certifica-oficial.png" class="footer-logo" alt="Certifica" onerror="this.style.display='none'" />
+    <div class="footer-badges">
+      <div class="footer-badge" style="background:#4CAF50;">9001</div>
+      <div class="footer-badge" style="background:#2196F3;">14001</div>
+      <div class="footer-badge" style="background:#1B6CA8;">45001</div>
+      <div class="footer-badge" style="background:#1B5E20; font-size:5.5px;">2030</div>
+      <div class="footer-badge" style="background:#6A1B9A; font-size:5.5px;">LGPD</div>
+    </div>
+    <div class="footer-qr">QR</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE 9 — DEPOIMENTOS (FIXED)
+═══════════════════════════════════════════════════════════ -->
+<div class="page" style="background: var(--bg);">
+  <div style="padding:12mm 10mm 18mm;">
+    <div style="font-size:24px; font-weight:900; color:var(--navy); font-style:italic; margin-bottom:1mm;">Depoimentos</div>
+    <div style="font-size:11px; color:#6b7280; margin-bottom:8mm;">O que nossos clientes falam sobre nos</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:5mm;">
+      <div style="background:white; border-radius:3mm; padding:5mm; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <div style="font-size:10px; color:#374151; line-height:1.6; font-style:italic; margin-bottom:3mm;">"A Certifica nos ajudou a implementar a ISO 9001 de forma rapida e eficiente. A equipe e extremamente competente e dedicada."</div>
+        <div style="font-size:10px; font-weight:700; color:var(--navy);">— Diretor de Qualidade, Heineken</div>
+      </div>
+      <div style="background:white; border-radius:3mm; padding:5mm; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <div style="font-size:10px; color:#374151; line-height:1.6; font-style:italic; margin-bottom:3mm;">"Excelente trabalho na auditoria interna. Identificaram pontos de melhoria que nos ajudaram a evoluir significativamente."</div>
+        <div style="font-size:10px; font-weight:700; color:var(--navy);">— Gerente Industrial, Ambev</div>
+      </div>
+      <div style="background:white; border-radius:3mm; padding:5mm; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <div style="font-size:10px; color:#374151; line-height:1.6; font-style:italic; margin-bottom:3mm;">"Parceria solida e resultados consistentes. Recomendo a Certifica para qualquer empresa que busque certificacao."</div>
+        <div style="font-size:10px; font-weight:700; color:var(--navy);">— CEO, Nextracker</div>
+      </div>
+      <div style="background:white; border-radius:3mm; padding:5mm; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <div style="font-size:10px; color:#374151; line-height:1.6; font-style:italic; margin-bottom:3mm;">"A equipe da Certifica trouxe um olhar diferenciado para nosso sistema de gestao. O resultado superou nossas expectativas."</div>
+        <div style="font-size:10px; font-weight:700; color:var(--navy);">— Coordenador SGI, Toyota</div>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <img src="/logo-certifica-oficial.png" class="footer-logo" alt="Certifica" onerror="this.style.display='none'" />
+    <div class="footer-badges">
+      <div class="footer-badge" style="background:#4CAF50;">9001</div>
+      <div class="footer-badge" style="background:#2196F3;">14001</div>
+      <div class="footer-badge" style="background:#1B6CA8;">45001</div>
+      <div class="footer-badge" style="background:#1B5E20; font-size:5.5px;">2030</div>
+      <div class="footer-badge" style="background:#6A1B9A; font-size:5.5px;">LGPD</div>
+    </div>
+    <div class="footer-qr">QR</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE 10 — PAULO MENDONCA (FIXED)
+═══════════════════════════════════════════════════════════ -->
+<div class="page" style="background: var(--bg);">
+  <div style="display:flex; height:100%;">
+    <div style="width:40%; position:relative; overflow:hidden;">
+      <img src="/Paulo-mendonca.jpg" style="width:100%; height:100%; object-fit:cover; object-position:center top;" alt="Paulo Mendonca"
+        onerror="this.parentElement.style.background='var(--navy)'" />
+    </div>
+    <div style="flex:1; padding:12mm 10mm; display:flex; flex-direction:column; justify-content:center;">
+      <div style="font-size:24px; font-weight:900; color:var(--navy); margin-bottom:2mm;">Paulo Mendonca</div>
+      <div style="font-size:12px; color:var(--blue); font-weight:700; margin-bottom:5mm;">Diretor Tecnico | Lead Auditor</div>
+      <p style="font-size:11px; color:#374151; line-height:1.7;">
+        Engenheiro com mais de 20 anos de experiencia em sistemas de gestao. Lead Auditor certificado em ISO 9001, ISO 14001, ISO 45001 e FSSC 22000. Atuou em mais de 500 empresas no Brasil e exterior.
+      </p>
+    </div>
+  </div>
+  <div class="page-footer">
+    <img src="/logo-certifica-oficial.png" class="footer-logo" alt="Certifica" onerror="this.style.display='none'" />
+    <div class="footer-badges">
+      <div class="footer-badge" style="background:#4CAF50;">9001</div>
+      <div class="footer-badge" style="background:#2196F3;">14001</div>
+      <div class="footer-badge" style="background:#1B6CA8;">45001</div>
+      <div class="footer-badge" style="background:#1B5E20; font-size:5.5px;">2030</div>
+      <div class="footer-badge" style="background:#6A1B9A; font-size:5.5px;">LGPD</div>
+    </div>
+    <div class="footer-qr">QR</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE 11 — MATTEO MENDONCA (FIXED)
+═══════════════════════════════════════════════════════════ -->
+<div class="page" style="background: var(--bg);">
+  <div style="display:flex; height:100%;">
+    <div style="flex:1; padding:12mm 10mm; display:flex; flex-direction:column; justify-content:center;">
+      <div style="font-size:24px; font-weight:900; color:var(--navy); margin-bottom:2mm;">Matteo Mendonca</div>
+      <div style="font-size:12px; color:var(--blue); font-weight:700; margin-bottom:5mm;">Diretor Comercial | Consultor</div>
+      <p style="font-size:11px; color:#374151; line-height:1.7;">
+        Especialista em gestao empresarial e implementacao de sistemas integrados. Experiencia em projetos de consultoria para grandes empresas multinacionais e nacionais.
+      </p>
+    </div>
+    <div style="width:40%; position:relative; overflow:hidden;">
+      <img src="/Matteo.jpg" style="width:100%; height:100%; object-fit:cover; object-position:center top;" alt="Matteo Mendonca"
+        onerror="this.parentElement.style.background='var(--navy)'" />
+    </div>
+  </div>
+  <div class="page-footer">
+    <img src="/logo-certifica-oficial.png" class="footer-logo" alt="Certifica" onerror="this.style.display='none'" />
+    <div class="footer-badges">
+      <div class="footer-badge" style="background:#4CAF50;">9001</div>
+      <div class="footer-badge" style="background:#2196F3;">14001</div>
+      <div class="footer-badge" style="background:#1B6CA8;">45001</div>
+      <div class="footer-badge" style="background:#1B5E20; font-size:5.5px;">2030</div>
+      <div class="footer-badge" style="background:#6A1B9A; font-size:5.5px;">LGPD</div>
+    </div>
+    <div class="footer-qr">QR</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE 12 — METODOLOGIA (FIXED)
+═══════════════════════════════════════════════════════════ -->
+<div class="page" style="background:white;">
+  <div style="padding:12mm 10mm 18mm;">
+    <div style="font-size:24px; font-weight:900; color:var(--navy); font-style:italic; margin-bottom:2mm;">Nossa Metodologia</div>
+    <div style="font-size:11px; color:#6b7280; margin-bottom:8mm;">Abordagem estruturada para resultados consistentes</div>
+    <div style="display:flex; gap:4mm;">
+      <div style="flex:1; text-align:center;">
+        <div style="width:16mm; height:16mm; border-radius:50%; background:var(--navy); color:white; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:900; margin:0 auto 3mm;">1</div>
+        <div style="font-size:11px; font-weight:700; color:var(--navy); margin-bottom:2mm;">Diagnostico</div>
+        <div style="font-size:9px; color:#6b7280; line-height:1.5;">Avaliacao completa do cenario atual e identificacao de gaps</div>
+      </div>
+      <div style="flex:1; text-align:center;">
+        <div style="width:16mm; height:16mm; border-radius:50%; background:var(--blue); color:white; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:900; margin:0 auto 3mm;">2</div>
+        <div style="font-size:11px; font-weight:700; color:var(--navy); margin-bottom:2mm;">Planejamento</div>
+        <div style="font-size:9px; color:#6b7280; line-height:1.5;">Definicao do plano de acao e cronograma</div>
+      </div>
+      <div style="flex:1; text-align:center;">
+        <div style="width:16mm; height:16mm; border-radius:50%; background:var(--lblue); color:white; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:900; margin:0 auto 3mm;">3</div>
+        <div style="font-size:11px; font-weight:700; color:var(--navy); margin-bottom:2mm;">Implementacao</div>
+        <div style="font-size:9px; color:#6b7280; line-height:1.5;">Execucao do plano com acompanhamento continuo</div>
+      </div>
+      <div style="flex:1; text-align:center;">
+        <div style="width:16mm; height:16mm; border-radius:50%; background:var(--navy); color:white; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:900; margin:0 auto 3mm;">4</div>
+        <div style="font-size:11px; font-weight:700; color:var(--navy); margin-bottom:2mm;">Auditoria</div>
+        <div style="font-size:9px; color:#6b7280; line-height:1.5;">Verificacao de conformidade e preparacao para certificacao</div>
+      </div>
+      <div style="flex:1; text-align:center;">
+        <div style="width:16mm; height:16mm; border-radius:50%; background:var(--blue); color:white; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:900; margin:0 auto 3mm;">5</div>
+        <div style="font-size:11px; font-weight:700; color:var(--navy); margin-bottom:2mm;">Certificacao</div>
+        <div style="font-size:9px; color:#6b7280; line-height:1.5;">Acompanhamento da auditoria de certificacao</div>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <img src="/logo-certifica-oficial.png" class="footer-logo" alt="Certifica" onerror="this.style.display='none'" />
+    <div class="footer-badges">
+      <div class="footer-badge" style="background:#4CAF50;">9001</div>
+      <div class="footer-badge" style="background:#2196F3;">14001</div>
+      <div class="footer-badge" style="background:#1B6CA8;">45001</div>
+      <div class="footer-badge" style="background:#1B5E20; font-size:5.5px;">2030</div>
+      <div class="footer-badge" style="background:#6A1B9A; font-size:5.5px;">LGPD</div>
+    </div>
+    <div class="footer-qr">QR</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE 13 — ESCOPO DO PROJETO (FIXED intro)
+═══════════════════════════════════════════════════════════ -->
+<div class="page" style="background:white;">
+  <div style="padding:12mm 10mm 18mm;">
+    <div style="font-size:24px; font-weight:900; color:var(--navy); margin-bottom:2mm;">Escopo do Projeto</div>
+    <div style="font-size:11px; color:#6b7280; margin-bottom:8mm;">Detalhamento tecnico da proposta</div>
+
+    <div style="display:flex; align-items:flex-start; gap:2mm; margin-bottom:5mm;">
+      <div style="width:5mm; height:5mm; background:var(--blue); border-radius:1mm; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1mm;">
+        <svg width="8" height="7" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div>
+        <div style="font-size:16px; font-weight:800; color:var(--navy); margin-bottom:2mm;">1 - Objeto:</div>
+        <p style="font-size:12px; color:#374151; line-height:1.6;">
+          Consultoria tecnica especializada para implementacao, adequacao e/ou manutencao de Sistemas de Gestao, conforme normas internacionais e requisitos especificos do cliente.
+        </p>
+      </div>
+    </div>
+
+    <p style="font-size:11px; color:#374151; line-height:1.7; margin-top:5mm;">
+      A Certifica Gestao de Sistemas se compromete a fornecer servicos de consultoria com os mais altos padroes de qualidade, utilizando metodologias comprovadas e profissionais altamente qualificados, buscando sempre superar as expectativas de nossos clientes.
+    </p>
+  </div>
+  <div class="page-footer">
+    <img src="/logo-certifica-oficial.png" class="footer-logo" alt="Certifica" onerror="this.style.display='none'" />
+    <div class="footer-badges">
+      <div class="footer-badge" style="background:#4CAF50;">9001</div>
+      <div class="footer-badge" style="background:#2196F3;">14001</div>
+      <div class="footer-badge" style="background:#1B6CA8;">45001</div>
+      <div class="footer-badge" style="background:#1B5E20; font-size:5.5px;">2030</div>
+      <div class="footer-badge" style="background:#6A1B9A; font-size:5.5px;">LGPD</div>
+    </div>
+    <div class="footer-qr">QR</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE 14 — PROJETO + DETALHAMENTO (VARIABLE)
+═══════════════════════════════════════════════════════════ -->
+<div class="page" style="background:white;">
+  <!-- Seal top-right -->
+  <div style="position:absolute; top:8mm; right:10mm;">
+    <div style="width:42mm; height:42mm; border-radius:50%; border:3px solid var(--navy);
+      background:white; box-shadow:0 3px 15px rgba(14,42,71,0.12);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      text-align:center; padding:4mm;">
+      <div style="font-size:9px; font-weight:800; color:var(--navy); text-transform:uppercase; letter-spacing:0.03em; line-height:1.3;">
+        IMPLEMENTACAO<br>ISO 14001:2015
+      </div>
+    </div>
+  </div>
+
+  <div style="padding:12mm 10mm 18mm; padding-right:58mm;">
+    <div style="font-size:18px; font-weight:800; color:var(--navy); margin-bottom:3mm;">2 - Projeto:</div>
+    <p style="font-size:12px; color:#374151; line-height:1.6; margin-bottom:5mm;">
+      Consultoria para implementacao do Sistema de Gestao Ambiental conforme requisitos da norma ISO 14001:2015, incluindo levantamento de aspectos e impactos ambientais, definicao de controles operacionais e preparacao para auditoria de certificacao.
+    </p>
+
+    <div style="font-size:16px; font-weight:800; color:var(--navy); margin-bottom:2mm;">3 – Detalhamento do Projeto</div>
+    <p style="font-size:11px; color:#374151; margin-bottom:3mm;">
+      Consultoria tecnica especializada de forma <strong>PRESENCIAL</strong>, com atuacao operacional direta, contemplando:
+    </p>
+    <div style="font-size:14px; font-weight:800; color:var(--navy); margin-bottom:3mm;">Detalhamento do Projeto</div>
+    <ul style="padding-left:5mm; list-style:none;">
+      <li style="font-size:11px; color:#374151; margin-bottom:2mm; padding-left:4mm; position:relative; line-height:1.5;">
+        <span style="position:absolute; left:0; color:var(--blue); font-weight:700;">&#10003;</span>
+        Diagnostico inicial do sistema de gestao ambiental atual;
+      </li>
+      <li style="font-size:11px; color:#374151; margin-bottom:2mm; padding-left:4mm; position:relative; line-height:1.5;">
+        <span style="position:absolute; left:0; color:var(--blue); font-weight:700;">&#10003;</span>
+        Levantamento e classificacao de aspectos e impactos ambientais;
+      </li>
+      <li style="font-size:11px; color:#374151; margin-bottom:2mm; padding-left:4mm; position:relative; line-height:1.5;">
+        <span style="position:absolute; left:0; color:var(--blue); font-weight:700;">&#10003;</span>
+        Elaboracao da politica ambiental e objetivos ambientais;
+      </li>
+      <li style="font-size:11px; color:#374151; margin-bottom:2mm; padding-left:4mm; position:relative; line-height:1.5;">
+        <span style="position:absolute; left:0; color:var(--blue); font-weight:700;">&#10003;</span>
+        Desenvolvimento da documentacao obrigatoria (procedimentos, registros, instrucoes);
+      </li>
+      <li style="font-size:11px; color:#374151; margin-bottom:2mm; padding-left:4mm; position:relative; line-height:1.5;">
+        <span style="position:absolute; left:0; color:var(--blue); font-weight:700;">&#10003;</span>
+        Treinamento e capacitacao das equipes envolvidas;
+      </li>
+      <li style="font-size:11px; color:#374151; margin-bottom:2mm; padding-left:4mm; position:relative; line-height:1.5;">
+        <span style="position:absolute; left:0; color:var(--blue); font-weight:700;">&#10003;</span>
+        Realizacao de auditoria interna;
+      </li>
+      <li style="font-size:11px; color:#374151; margin-bottom:2mm; padding-left:4mm; position:relative; line-height:1.5;">
+        <span style="position:absolute; left:0; color:var(--blue); font-weight:700;">&#10003;</span>
+        Preparacao para auditoria de certificacao;
+      </li>
+      <li style="font-size:11px; color:#374151; margin-bottom:2mm; padding-left:4mm; position:relative; line-height:1.5;">
+        <span style="position:absolute; left:0; color:var(--blue); font-weight:700;">&#10003;</span>
+        Demais atividades pertinentes ao escopo.
+      </li>
+    </ul>
+  </div>
+
+  <!-- Side cards (right, like original) -->
+  <div style="position:absolute; top:58mm; right:10mm; width:44mm; display:flex; flex-direction:column; gap:3mm;">
+    <div style="background:var(--blue); border-radius:2mm; padding:3mm 4mm; color:white;">
+      <div style="font-size:14px; font-weight:800;">Carga horaria: 15 dias</div>
+    </div>
+    <div style="background:#F0F4F8; border-radius:2mm; padding:3mm 4mm;">
+      <div style="font-size:10px; color:var(--navy); line-height:1.5;">
+        <strong>Premissa:</strong> disponibilizacao das equipes para apoio na implementacao. Cumprimento do plano.
+      </div>
+    </div>
+    <div style="background:#F0F4F8; border-radius:2mm; padding:3mm 4mm;">
+      <div style="font-size:10px; color:var(--navy); line-height:1.5;">
+        <strong>Restricao:</strong> internet, acidentes, doenca.
+      </div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <img src="/logo-certifica-oficial.png" class="footer-logo" alt="Certifica" onerror="this.style.display='none'" />
+    <div class="footer-badges"><div class="footer-badge" style="background:#4CAF50;">9001</div><div class="footer-badge" style="background:#2196F3;">14001</div><div class="footer-badge" style="background:#1B6CA8;">45001</div><div class="footer-badge" style="background:#1B5E20; font-size:5.5px;">2030</div><div class="footer-badge" style="background:#6A1B9A; font-size:5.5px;">LGPD</div></div>
+    <div class="footer-qr">QR</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE 15 — CONDICOES COMERCIAIS (VARIABLE)
+═══════════════════════════════════════════════════════════ -->
+<div class="page" style="background:white;">
+  <!-- Seal top-right -->
+  <div style="position:absolute; top:8mm; right:10mm;">
+    <div style="width:42mm; height:42mm; border-radius:50%; border:3px solid var(--navy);
+      background:white; box-shadow:0 3px 15px rgba(14,42,71,0.12);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      text-align:center; padding:4mm;">
+      <div style="font-size:9px; font-weight:800; color:var(--navy); text-transform:uppercase; letter-spacing:0.03em; line-height:1.3;">
+        IMPLEMENTACAO<br>ISO 14001:2015
+      </div>
+    </div>
+  </div>
+
+  <div style="padding:12mm 10mm 18mm; padding-right:58mm;">
+    <div style="font-size:18px; font-weight:800; color:var(--blue); margin-bottom:4mm;">4 – Condicoes Comerciais</div>
+
+    <!-- Price highlight (yellow background like original) -->
+    <div style="margin-bottom:4mm;">
+      <div style="display:flex; align-items:center; gap:2mm; margin-bottom:2mm;">
+        <div style="width:5mm; height:5mm; background:var(--blue); border-radius:1mm; display:flex; align-items:center; justify-content:center;">
+          <svg width="8" height="7" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <span style="font-size:12px; font-weight:700; color:var(--navy);">Cronograma de atividades x custo:</span>
+      </div>
+      <div style="background:var(--accent); border-radius:2mm; padding:4mm 5mm;">
+        <div style="font-size:14px; font-weight:800; color:var(--navy);">MO: R$ 1.650,00 x 15 = R$ 24.750,00</div>
+        <div style="font-size:22px; font-weight:900; color:var(--navy); margin-top:1mm;">TOTAL: R$ 24.750,00</div>
+        <div style="font-size:11px; color:#374151; margin-top:1mm;">(Vinte e Quatro Mil e Setecentos e Cinquenta Reais)</div>
+      </div>
+    </div>
+
+    <!-- Conditions -->
+    <div style="display:flex; align-items:center; gap:2mm; margin-bottom:3mm;">
+      <div style="width:5mm; height:5mm; background:var(--blue); border-radius:1mm; display:flex; align-items:center; justify-content:center;">
+        <svg width="8" height="7" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <span style="font-size:12px; font-weight:700; color:var(--navy);">Condicoes de pagamento:</span>
+    </div>
+    <ul style="padding-left:0; list-style:none;">
+      <li style="font-size:10px; color:#374151; margin-bottom:1.5mm; padding-left:5mm; position:relative; line-height:1.5;"><span style="position:absolute; left:0; color:var(--blue); font-weight:700;">&#10003;</span>30 dias da NF;</li>
+      <li style="font-size:10px; color:#374151; margin-bottom:1.5mm; padding-left:5mm; position:relative; line-height:1.5;"><span style="position:absolute; left:0; color:var(--blue); font-weight:700;">&#10003;</span>Todos os materiais didaticos e certificados serao emitidos eletronicamente;</li>
+      <li style="font-size:10px; color:#374151; margin-bottom:1.5mm; padding-left:5mm; position:relative; line-height:1.5;"><span style="position:absolute; left:0; color:var(--blue); font-weight:700;">&#10003;</span>Caso seja necessario a inclusao de mais dias, serao cobrados relativos ao item 4;</li>
+      <li style="font-size:10px; color:#374151; margin-bottom:1.5mm; padding-left:5mm; position:relative; line-height:1.5;"><span style="position:absolute; left:0; color:var(--blue); font-weight:700;">&#10003;</span><strong>Todas as despesas de viagem a cargo da contratada;</strong></li>
+      <li style="font-size:10px; color:#374151; margin-bottom:1.5mm; padding-left:5mm; position:relative; line-height:1.5;"><span style="position:absolute; left:0; color:var(--blue); font-weight:700;">&#10003;</span><strong>Todas as despesas de alimentacao durante o trabalho, a cargo da contratante;</strong></li>
+      <li style="font-size:10px; color:#374151; margin-bottom:1.5mm; padding-left:5mm; position:relative; line-height:1.5;"><span style="position:absolute; left:0; color:var(--blue); font-weight:700;">&#10003;</span>Codigo de servico NF: Servico: <strong>1701 - Assessoria ou consultoria de qualquer natureza</strong></li>
+      <li style="font-size:10px; color:#374151; margin-bottom:1.5mm; padding-left:5mm; position:relative; line-height:1.5;"><span style="position:absolute; left:0; color:var(--blue); font-weight:700;">&#10003;</span>Nao esta no escopo qualquer emissao de laudo, relatorios e documentos legais para atendimento da legislacao ambiental e de saude e seguranca ocupacional (LO, AVCB, PGR, PCMSO, etc);</li>
+      <li style="font-size:10px; color:#374151; margin-bottom:1.5mm; padding-left:5mm; position:relative; line-height:1.5;"><span style="position:absolute; left:0; color:var(--blue); font-weight:700;">&#10003;</span>Validade da proposta: <strong>30 dias</strong>;</li>
+    </ul>
+  </div>
+
+  <!-- Side cards -->
+  <div style="position:absolute; top:58mm; right:10mm; width:44mm; display:flex; flex-direction:column; gap:3mm;">
+    <div style="background:var(--blue); border-radius:2mm; padding:3mm 4mm; color:white;">
+      <div style="font-size:14px; font-weight:800;">Carga horaria: 15 dias</div>
+    </div>
+    <div style="background:#F0F4F8; border-radius:2mm; padding:3mm 4mm;">
+      <div style="font-size:10px; color:var(--navy); line-height:1.5;">
+        <strong>Premissa:</strong> disponibilizacao das equipes para apoio na implementacao. Cumprimento do plano.
+      </div>
+    </div>
+    <div style="background:#F0F4F8; border-radius:2mm; padding:3mm 4mm;">
+      <div style="font-size:10px; color:var(--navy); line-height:1.5;">
+        <strong>Restricao:</strong> internet, acidentes, doenca.
+      </div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <img src="/logo-certifica-oficial.png" class="footer-logo" alt="Certifica" onerror="this.style.display='none'" />
+    <div class="footer-badges"><div class="footer-badge" style="background:#4CAF50;">9001</div><div class="footer-badge" style="background:#2196F3;">14001</div><div class="footer-badge" style="background:#1B6CA8;">45001</div><div class="footer-badge" style="background:#1B5E20; font-size:5.5px;">2030</div><div class="footer-badge" style="background:#6A1B9A; font-size:5.5px;">LGPD</div></div>
+    <div class="footer-qr">QR</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE 16 — DADOS CADASTRAIS (PARTIALLY VARIABLE)
+═══════════════════════════════════════════════════════════ -->
+<div class="page" style="background:white;">
+  <div style="padding:12mm 10mm 18mm;">
+    <div style="font-size:18px; font-weight:800; color:var(--navy); margin-bottom:6mm;">5 – Dados Cadastrais</div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6mm 12mm;">
+      <!-- Left: company data -->
+      <div>
+        <div style="display:flex; align-items:center; gap:2mm; margin-bottom:3mm;">
+          <div style="width:5mm; height:5mm; background:var(--blue); border-radius:1mm; display:flex; align-items:center; justify-content:center;">
+            <svg width="8" height="7" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <span style="font-size:12px; font-weight:700; color:var(--navy);">Condicoes de pagamento:</span>
+        </div>
+        <div style="font-size:10px; color:#374151; line-height:2;">
+          <div>&#10003; Razao Social: <strong>Certifica - Gestao de Sistemas Ltda</strong></div>
+          <div>&#10003; CNPJ: <strong>08.145.287/0001-50</strong></div>
+          <div>&#10003; Inscricao Estadual – <strong>Isento</strong></div>
+          <div>&#10003; Inscricao Municipal: <strong>000142249</strong></div>
+          <div>&#10003; Rua Ricardo Severo, 49, sala 15, Villa Assis, Sorocaba/SP, CEP 18025-140</div>
+          <div>&#10003; Tel: <strong>(15) 99783-5487</strong></div>
+          <div>&#10003; Banco do Brasil: <strong>001</strong></div>
+          <div>&#10003; Agencia: <strong>2923-8</strong></div>
+          <div>&#10003; Conta Corrente: <strong>18.889-1</strong></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:2mm; margin-top:4mm; margin-bottom:2mm;">
+          <div style="width:5mm; height:5mm; background:var(--blue); border-radius:1mm; display:flex; align-items:center; justify-content:center;">
+            <svg width="8" height="7" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <span style="font-size:12px; font-weight:700; color:var(--navy);">CNAE:</span>
+        </div>
+        <div style="font-size:10px; color:#374151; line-height:1.8;">
+          <div>&#10003; 85.99-6-04 - Treinamento em desenvolvimento profissional e gerencial</div>
+          <div>&#10003; 70.20-4-00 - Atividades de consultoria em gestao empresarial, exceto consultoria tecnica especifica</div>
+          <div>&#10003; 82.11-3-00 - Servicos combinados de escritorio e apoio administrativo</div>
+          <div>&#10003; 85.99-6-99 - Outras atividades de ensino nao especificadas anteriormente</div>
+        </div>
+      </div>
+
+      <!-- Right: CNAE x Servico -->
+      <div>
+        <div style="display:flex; align-items:center; gap:2mm; margin-bottom:3mm;">
+          <div style="width:5mm; height:5mm; background:var(--blue); border-radius:1mm; display:flex; align-items:center; justify-content:center;">
+            <svg width="8" height="7" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <span style="font-size:12px; font-weight:700; color:var(--navy);">CNAE x Servico:</span>
+        </div>
+        <div style="font-size:10px; color:#374151; line-height:1.6;">
+          <div style="margin-bottom:3mm;">
+            <div>85.99-6-04 - Treinamento em desenvolvimento profissional e gerencial.</div>
+            <div>Servico: 0802 - Instrucao, treinamento, orientacao pedagogica e educacional, avaliacao de conhecimentos de qualquer natureza.</div>
+          </div>
+          <div style="margin-bottom:3mm; padding:2mm; background:#EBF5FF; border:1px solid var(--blue); border-radius:1.5mm;">
+            <div><strong>70.20-4-00 - Atividades de consultoria em gestao empresarial.</strong></div>
+            <div><strong style="color:var(--blue);">Servico: 1701 - Assessoria ou consultoria de qualquer natureza</strong></div>
+          </div>
+          <div style="margin-bottom:3mm;">
+            <div><strong>82.11-3-00 - Servicos combinados de escritorio e apoio administrativo.</strong></div>
+            <div><strong>Servico: 1702 - Apoio e infraestrutura administrativa e congeneres.</strong></div>
+          </div>
+          <div>
+            <div>85.99-6-99 - Outras atividades de ensino nao especificadas anteriormente.</div>
+            <div>Servico: 1724 - Apresentacao de palestras, conferencias, seminarios e congeneres.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <img src="/logo-certifica-oficial.png" class="footer-logo" alt="Certifica" onerror="this.style.display='none'" />
+    <div class="footer-badges"><div class="footer-badge" style="background:#4CAF50;">9001</div><div class="footer-badge" style="background:#2196F3;">14001</div><div class="footer-badge" style="background:#1B6CA8;">45001</div><div class="footer-badge" style="background:#1B5E20; font-size:5.5px;">2030</div><div class="footer-badge" style="background:#6A1B9A; font-size:5.5px;">LGPD</div></div>
+    <div class="footer-qr">QR</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE 17 — CONSIDERACOES FINAIS (PARTIALLY VARIABLE)
+═══════════════════════════════════════════════════════════ -->
+<div class="page" style="background:white;">
+  <div style="padding:12mm 10mm 18mm; max-width:200mm;">
+    <div style="font-size:18px; font-weight:800; color:var(--navy); margin-bottom:5mm;">6 – Consideracoes Finais</div>
+
+    <div style="display:flex; align-items:flex-start; gap:2mm; margin-bottom:3mm;">
+      <div style="width:5mm; height:5mm; background:var(--blue); border-radius:1mm; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1mm;">
+        <svg width="8" height="7" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <p style="font-size:11px; color:#374151; line-height:1.65;">
+        A Certifica Gestao de Sistemas tem como politica de trabalho prestar servicos de consultoria e se compromete em manter o sigilo necessario no que se refere as informacoes fornecidas pelo CLIENTE a fim de nao comprometer os objetivos estrategicos do cliente.
+      </p>
+    </div>
+
+    <p style="font-size:11px; color:#374151; line-height:1.65; margin-bottom:3mm;">
+      As partes declaram-se responsaveis socialmente, e comprometem-se no desenvolvimento de suas atividades observarem as seguintes disposicoes:
+    </p>
+
+    <ul style="padding-left:0; list-style:none; margin-bottom:4mm;">
+      <li style="font-size:10px; color:#374151; margin-bottom:2mm; padding-left:5mm; position:relative; line-height:1.6;">
+        <span style="position:absolute; left:0; color:var(--blue); font-weight:700;">&#10003;</span>
+        Respeitar a legislacao atual que proibe o trabalho de criancas e adolescentes com menos de 16 anos de idade, exceto na condicao de menor aprendiz a partir de 14 anos de idade;
+      </li>
+      <li style="font-size:10px; color:#374151; margin-bottom:2mm; padding-left:5mm; position:relative; line-height:1.6;">
+        <span style="position:absolute; left:0; color:var(--blue); font-weight:700;">&#10003;</span>
+        Desenvolver esforcos para a reducao, reutilizacao e reciclagem de materiais e recursos, tais como energia, agua, produtos toxicos e materias primas, buscando ainda a implantacao de processos de destinacao adequada de residuos, obedecendo a legislacao ambiental vigente;
+      </li>
+      <li style="font-size:10px; color:#374151; margin-bottom:2mm; padding-left:5mm; position:relative; line-height:1.6;">
+        <span style="position:absolute; left:0; color:var(--blue); font-weight:700;">&#10003;</span>
+        Oferecer condicoes de trabalho que nao sejam prejudiciais ao desenvolvimento fisico, psiquico, moral e social de seus colaboradores;
+      </li>
+      <li style="font-size:10px; color:#374151; margin-bottom:2mm; padding-left:5mm; position:relative; line-height:1.6;">
+        <span style="position:absolute; left:0; color:var(--blue); font-weight:700;">&#10003;</span>
+        Cumprir fielmente as obrigacoes fiscais, tributarias, trabalhistas e previdenciarias.
+      </li>
+    </ul>
+
+    <p style="font-size:11px; color:#374151; line-height:1.65; margin-bottom:3mm;">
+      Sem mais para o momento, colocamo-nos a vossa disposicao para quaisquer esclarecimentos adicionais que se fizerem necessarios.
+    </p>
+
+    <p style="font-size:11px; color:#374151; margin-bottom:2mm;">Sorocaba, 09 de Abril de 2026</p>
+    <p style="font-size:11px; color:#6b7280; margin-bottom:6mm;">Fraternalmente,</p>
+
+    <!-- Signatures -->
+    <div style="display:flex; gap:20mm; margin-top:4mm;">
+      <div style="text-align:center; width:60mm;">
+        <div style="border-top:1px solid var(--navy); padding-top:3mm; margin-top:10mm;">
+          <div style="font-size:13px; font-weight:800; color:var(--navy);">Paulo Mendonca</div>
+        </div>
+      </div>
+      <div style="text-align:center; width:60mm;">
+        <div style="border-top:1px solid var(--navy); padding-top:3mm; margin-top:10mm;">
+          <div style="font-size:13px; font-weight:800; color:var(--navy);">Matteo Mendonca</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <img src="/logo-certifica-oficial.png" class="footer-logo" alt="Certifica" onerror="this.style.display='none'" />
+    <div class="footer-badges"><div class="footer-badge" style="background:#4CAF50;">9001</div><div class="footer-badge" style="background:#2196F3;">14001</div><div class="footer-badge" style="background:#1B6CA8;">45001</div><div class="footer-badge" style="background:#1B5E20; font-size:5.5px;">2030</div><div class="footer-badge" style="background:#6A1B9A; font-size:5.5px;">LGPD</div></div>
+    <div class="footer-qr">QR</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE 18 — CONTATO FINAL (FIXED)
+═══════════════════════════════════════════════════════════ -->
+<div class="page" style="background:var(--bg);">
+  <!-- Organic curves bottom-left (like original) -->
+  <svg style="position:absolute; bottom:0; left:0; width:50%; height:60%; pointer-events:none;" viewBox="0 0 400 300" preserveAspectRatio="xMinYMax slice">
+    <path d="M0 300 L0 0 Q80 30 120 100 Q160 170 130 240 Q100 280 0 300 Z" fill="#0E2A47" opacity="0.85"/>
+    <path d="M0 300 L0 50 Q50 70 80 130 Q110 190 85 250 Q60 290 0 300 Z" fill="#1B6CA8" opacity="0.75"/>
+  </svg>
+
+  <!-- Center content -->
+  <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:2;">
+    <!-- Logo large -->
+    <img src="/logo-certifica-oficial.png" style="height:22mm; object-fit:contain; margin-bottom:8mm;"
+      alt="Certifica" onerror="this.outerHTML='<div style=\'font-size:32px;font-weight:900;color:#0E2A47;margin-bottom:8mm;\'>Certifica&reg;</div>'" />
+
+    <!-- Two contacts side by side (like original) -->
+    <div style="display:flex; gap:20mm; margin-bottom:6mm;">
+      <div style="text-align:center;">
+        <div style="font-size:16px; font-weight:800; color:var(--navy); margin-bottom:2mm;">Paulo</div>
+        <div style="font-size:13px; color:var(--navy); margin-bottom:1mm;">(15) 99783-5487</div>
+        <div style="font-size:13px; color:var(--navy);">paulo@certificags.com.br</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:16px; font-weight:800; color:var(--navy); margin-bottom:2mm;">Matteo</div>
+        <div style="font-size:13px; color:var(--navy); margin-bottom:1mm;">(15) 99783-5488</div>
+        <div style="font-size:13px; color:var(--navy);">matteo@certificags.com.br</div>
+      </div>
+    </div>
+
+    <div style="font-size:14px; font-weight:600; color:var(--blue); margin-bottom:4mm;">www.certificags.com.br</div>
+
+    <div style="font-size:11px; color:#6b7280; margin-bottom:4mm;">
+      certificags &nbsp; certifica.gs &nbsp; Certifica Gestao de Sistemas
+    </div>
+
+    <!-- ISO badges -->
+    <div style="display:flex; gap:3mm; margin-top:2mm;">
+      <div class="footer-badge" style="background:#4CAF50; width:10mm; height:10mm; font-size:7px;">9001</div>
+      <div class="footer-badge" style="background:#2196F3; width:10mm; height:10mm; font-size:7px;">14001</div>
+      <div class="footer-badge" style="background:#1B6CA8; width:10mm; height:10mm; font-size:7px;">45001</div>
+      <div class="footer-badge" style="background:#1B5E20; width:10mm; height:10mm; font-size:6px; line-height:1.1;">2030</div>
+      <div class="footer-badge" style="background:#6A1B9A; width:10mm; height:10mm; font-size:6px; line-height:1.1;">LGPD</div>
+    </div>
+  </div>
+</div>
+
+
+</body>
+</html>

@@ -6,13 +6,15 @@ import {
   Image as ImageIcon, FileText, X, Plus, Download,
   Info, Trash2, Archive, Pin, Star, User, Users,
   Play, Pause, Bot, BotOff, Clock, ArrowLeft, UserPlus, Contact,
-  FolderOpen, ChevronRight, Mail,
+  FolderOpen, ChevronRight, Mail, QrCode, RefreshCw, Reply,
 } from 'lucide-react';
 import {
-  getZApiStatus, getChats, sendText, sendImage, sendDocument, sendAudio,
-  getProfilePicture, modifyChat, normalizePhone,
-  type ZApiStatus, type ZApiChat, type ZApiSendResult,
-} from '../lib/zapi';
+  getStatus, findChats, sendText, sendMedia, sendAudio,
+  fetchProfilePictureUrl, normalizePhone, findMessages,
+  getQrCode, createInstance, getConnectionState, getEvolutionConfig,
+  deleteMessageForEveryone,
+  type EvolutionStatus, type EvolutionChatItem, type EvolutionSendResult,
+} from '../lib/evolution';
 import { supabase } from '../lib/supabase';
 import type { WhatsAppMessage, Document } from '../lib/database.types';
 import { findContatoByPhone, type ContatoWithEmpresa } from '../lib/useContatos';
@@ -32,8 +34,8 @@ interface StagedFile {
 
 /* ── helpers ─────────────────────────────────────── */
 
-function chatId(c: ZApiChat) { return c.phone || c.lid || String(c.lastMessageTime) || Math.random().toString(); }
-function chatPhone(c: ZApiChat) { return c.phone || c.lid || ''; }
+function chatId(c: EvolutionChatItem) { return c.phone || c.lid || String(c.lastMessageTime) || Math.random().toString(); }
+function chatPhone(c: EvolutionChatItem) { return c.phone || c.lid || ''; }
 
 function toDigits(id?: string): string {
   if (!id) return '';
@@ -47,7 +49,7 @@ function canonize(d: string) {
   return d;
 }
 
-function chatLabel(c: ZApiChat) {
+function chatLabel(c: EvolutionChatItem) {
   if (c.name && c.name.trim()) return c.name;
   const p = chatPhone(c);
   if (!p || p === '0') return 'Desconhecido';
@@ -55,7 +57,7 @@ function chatLabel(c: ZApiChat) {
   return formatPhone(digits) || digits || 'Desconhecido';
 }
 
-function chatInitial(c: ZApiChat) { return chatLabel(c).charAt(0).toUpperCase() || '?'; }
+function chatInitial(c: EvolutionChatItem) { return chatLabel(c).charAt(0).toUpperCase() || '?'; }
 
 function formatPhone(phone?: string) {
   if (!phone) return '';
@@ -126,8 +128,8 @@ const EMOJI_CATEGORIES: { label: string; emojis: string[] }[] = [
 
 /* ── Profile Panel sub-component ── */
 function ProfilePanel({ chat, getPhoto, chatLabel: labelFn, chatPhone: phoneFn, chatInitial: initialFn, linkedContato, chatDocHistory, empresaDocs, pipeline, onClose, onNavigate }: {
-  chat: ZApiChat; getPhoto: (c: ZApiChat) => string | null; chatLabel: (c: ZApiChat) => string; chatPhone: (c: ZApiChat) => string;
-  chatInitial: (c: ZApiChat) => string; linkedContato: ContatoWithEmpresa | null; chatDocHistory: WhatsAppMessage[];
+  chat: EvolutionChatItem; getPhoto: (c: EvolutionChatItem) => string | null; chatLabel: (c: EvolutionChatItem) => string; chatPhone: (c: EvolutionChatItem) => string;
+  chatInitial: (c: EvolutionChatItem) => string; linkedContato: ContatoWithEmpresa | null; chatDocHistory: WhatsAppMessage[];
   empresaDocs: Document[]; pipeline: ReturnType<typeof usePipeline>; onClose: () => void; onNavigate: (path: string) => void;
 }) {
   const photo = getPhoto(chat);
@@ -158,16 +160,48 @@ function ProfilePanel({ chat, getPhoto, chatLabel: labelFn, chatPhone: phoneFn, 
     const IconEl = isImg ? ImageIcon : isDoc ? FileText : isAudio ? Mic : isVideo ? Play : Paperclip;
     const iconBg = isImg ? 'bg-amber-50 text-amber-500' : isDoc ? 'bg-blue-50 text-blue-500' : 'bg-green-50 text-green-500';
     const raw = msg.raw as Record<string, any> | undefined;
-    const mediaUrl = raw?.image?.imageUrl || raw?.image?.url || raw?.document?.documentUrl || raw?.document?.url || raw?.video?.videoUrl || raw?.audio?.audioUrl || null;
+    // Support both new format (_mediaUrl) and legacy formats
+    const mediaUrl = raw?._mediaUrl || raw?._localPreview ||
+      raw?.image?.imageUrl || raw?.image?.url ||
+      raw?.document?.documentUrl || raw?.document?.url ||
+      raw?.video?.videoUrl || raw?.audio?.audioUrl || null;
+    const fileName = raw?._fileName || msg.body || `arquivo.${isImg ? 'jpg' : isDoc ? 'pdf' : isAudio ? 'ogg' : isVideo ? 'mp4' : 'bin'}`;
+
+    const handleDownload = async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!mediaUrl) return;
+      try {
+        const res = await fetch(mediaUrl);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch {
+        // Fallback: open in new tab if fetch fails (CORS)
+        window.open(mediaUrl, '_blank');
+      }
+    };
+
     return (
-      <div key={msg.id} onClick={() => mediaUrl && window.open(mediaUrl, '_blank')}
-        className={`flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-gray-50 transition-colors ${mediaUrl ? 'cursor-pointer' : ''}`}>
+      <div key={msg.id}
+        className={`flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-gray-50 transition-colors ${mediaUrl ? 'cursor-pointer' : ''}`}
+        onClick={() => mediaUrl && window.open(mediaUrl, '_blank')}>
         <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${iconBg}`}><IconEl className="w-4 h-4" /></div>
         <div className="flex-1 min-w-0">
-          <p className="text-[12px] text-[#0F172A] truncate font-medium">{msg.body || `[${msg.message_type}]`}</p>
+          <p className="text-[12px] text-[#0F172A] truncate font-medium">{fileName}</p>
           <p className="text-[10px] text-gray-400">{msg.timestamp ? new Date(msg.timestamp).toLocaleDateString('pt-BR') : ''}</p>
         </div>
-        {mediaUrl && <Download className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />}
+        {mediaUrl && (
+          <button onClick={handleDownload} title="Baixar"
+            className="p-1.5 rounded-full hover:bg-gray-200 text-gray-400 hover:text-[#2B8EAD] flex-shrink-0 transition-colors">
+            <Download className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
     );
   }
@@ -335,13 +369,20 @@ function ProfileContactInfo({ phone, formatPhoneFn }: { phone: string; formatPho
 
 export default function ChatPage() {
   const navigate = useNavigate();
-  const [status, setStatus] = useState<ZApiStatus | null>(null);
+  const [status, setStatus] = useState<EvolutionStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
-  const [chats, setChats] = useState<ZApiChat[]>([]);
+  // QR code connection flow
+  const [qrImage, setQrImage] = useState<string | null>(null);
+  const [qrStatus, setQrStatus] = useState<'idle' | 'loading' | 'showing' | 'connected'>('idle');
+  const qrPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Reply/delete
+  const [replyTo, setReplyTo] = useState<WhatsAppMessage | null>(null);
+  const [msgMenuFor, setMsgMenuFor] = useState<string | null>(null);
+  const [chats, setChats] = useState<EvolutionChatItem[]>([]);
   const [chatsLoading, setChatsLoading] = useState(false);
   const [photoCache, setPhotoCache] = useState<Map<string, string | null>>(new Map());
   const photoLoadingRef = useRef<Set<string>>(new Set());
-  const [selectedChat, setSelectedChat] = useState<ZApiChat | null>(null);
+  const [selectedChat, setSelectedChat] = useState<EvolutionChatItem | null>(null);
   const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [inputText, setInputText] = useState('');
@@ -378,7 +419,7 @@ export default function ChatPage() {
 
   // Sidebar tab & contacts
   const [sidebarTab, setSidebarTab] = useState<'chats' | 'contacts'>('chats');
-  const [contacts, setContacts] = useState<ZApiChat[]>([]);
+  const [contacts, setContacts] = useState<EvolutionChatItem[]>([]);
   const [contactsLoading, setContactsLoading] = useState(false);
   const contactsLoadedRef = useRef(false);
   const [showNewContact, setShowNewContact] = useState(false);
@@ -429,10 +470,14 @@ export default function ChatPage() {
       if (showAttach && attachRef.current && !attachRef.current.contains(e.target as Node)) setShowAttach(false);
       if (showChatMenu && chatMenuRef.current && !chatMenuRef.current.contains(e.target as Node)) setShowChatMenu(false);
       if (showDocPanel && docPanelRef.current && !docPanelRef.current.contains(e.target as Node)) setShowDocPanel(false);
+      if (msgMenuFor) {
+        const target = e.target as HTMLElement;
+        if (!target.closest('[data-msg-menu]')) setMsgMenuFor(null);
+      }
     }
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
-  }, [showEmoji, showAttach, showChatMenu, showDocPanel]);
+  }, [showEmoji, showAttach, showChatMenu, showDocPanel, msgMenuFor]);
 
   /* ── Escape closes overlays ── */
   useEffect(() => {
@@ -475,11 +520,95 @@ export default function ChatPage() {
   /* ── status ── */
   const loadStatus = useCallback(async () => {
     setStatusLoading(true); setError(null);
-    try { setStatus(await getZApiStatus()); }
+    try { setStatus(await getStatus()); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erro ao verificar conexão.'); setStatus(null); }
     finally { setStatusLoading(false); }
   }, []);
   useEffect(() => { loadStatus(); }, [loadStatus]);
+
+  /* ── QR code connection ── */
+  const handleConnectWhatsApp = useCallback(async () => {
+    setQrStatus('loading');
+    setError(null);
+    try {
+      const cfg = await getEvolutionConfig();
+      if (!cfg.url || !cfg.apiKey) {
+        setError('Configure a Evolution API em Configurações primeiro.');
+        setQrStatus('idle');
+        return;
+      }
+      try { await createInstance(); } catch { /* instance may already exist */ }
+      const qr = await getQrCode();
+      setQrImage(qr.base64);
+      setQrStatus('showing');
+      qrPollRef.current = setInterval(async () => {
+        try {
+          const state = await getConnectionState();
+          if (state.instance.state === 'open') {
+            if (qrPollRef.current) { clearInterval(qrPollRef.current); qrPollRef.current = null; }
+            setQrStatus('connected');
+            setQrImage(null);
+            setStatus({ connected: true });
+          }
+        } catch { /* keep polling */ }
+      }, 4000);
+      setTimeout(() => {
+        if (qrPollRef.current) { clearInterval(qrPollRef.current); qrPollRef.current = null; }
+      }, 120000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro ao gerar QR code.');
+      setQrStatus('idle');
+    }
+  }, []);
+
+  const handleRefreshQr = useCallback(async () => {
+    try {
+      const qr = await getQrCode();
+      setQrImage(qr.base64);
+    } catch {
+      setError('Erro ao gerar novo QR code.');
+    }
+  }, []);
+
+  /* ── delete / reply handlers ── */
+  const handleReplyMsg = useCallback((msg: WhatsAppMessage) => {
+    setReplyTo(msg);
+    setMsgMenuFor(null);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }, []);
+
+  const handleDeleteForMe = useCallback(async (msg: WhatsAppMessage) => {
+    setMsgMenuFor(null);
+    try {
+      if (msg.id) {
+        await supabase.from('whatsapp_messages').delete().eq('id', msg.id);
+      }
+      setMessages(prev => prev.filter(m => m.id !== msg.id));
+      toast.success('Mensagem apagada para voce.');
+    } catch { toast.error('Falha ao apagar mensagem.'); }
+  }, []);
+
+  const handleDeleteForEveryone = useCallback(async (msg: WhatsAppMessage) => {
+    setMsgMenuFor(null);
+    if (!msg.from_me) { toast.error('So e possivel apagar suas proprias mensagens para todos.'); return; }
+    if (!msg.message_id || msg.message_id.startsWith('local-') || msg.message_id.startsWith('temp-')) {
+      toast.error('Aguarde a mensagem ser enviada antes de apagar.');
+      return;
+    }
+    try {
+      const phone = msg.phone || (selectedChat ? canonize(toDigits(chatPhone(selectedChat))) : '');
+      await deleteMessageForEveryone(phone, msg.message_id, true);
+      if (msg.id) await supabase.from('whatsapp_messages').delete().eq('id', msg.id);
+      setMessages(prev => prev.filter(m => m.id !== msg.id));
+      toast.success('Mensagem apagada para todos.');
+    } catch (e) {
+      toast.error('Falha ao apagar para todos.');
+    }
+  }, [selectedChat]);
+
+  useEffect(() => {
+    return () => { if (qrPollRef.current) clearInterval(qrPollRef.current); };
+  }, []);
 
   /* ── chats ── */
   const loadChats = useCallback(async () => {
@@ -492,7 +621,7 @@ export default function ChatPage() {
     }
     if (!chatsLoadedOnceRef.current) setChatsLoading(true);
     try {
-      const chatList = await getChats(1, 50);
+      const chatList = await findChats();
       const rawList = (Array.isArray(chatList) ? chatList : []).filter(c => chatPhone(c) && chatPhone(c) !== '0');
 
       const seenCanon = new Set<string>();
@@ -509,17 +638,31 @@ export default function ChatPage() {
       setChats(filtered);
       chatsLoadedOnceRef.current = true;
 
-      // Load last message previews from Supabase
+      // Build preview map from Evolution API data (primary source)
+      const evoMap = new Map<string, { body: string; status: string | null; fromMe: boolean }>();
+      for (const c of filtered) {
+        const canon = canonize(toDigits(chatPhone(c)));
+        if (canon && (c as any).lastMessagePreview) {
+          evoMap.set(canon, {
+            body: (c as any).lastMessagePreview || '',
+            status: (c as any).lastMessageStatus || null,
+            fromMe: (c as any).lastMessageFromMe || false,
+          });
+        }
+      }
+      setLastMsgMap(evoMap);
+
+      // Also merge with Supabase (in case we have messages Evolution doesn't return)
       const phones = filtered.map(c => canonize(toDigits(chatPhone(c)))).filter(Boolean);
       if (phones.length > 0) {
         const { data } = await supabase
           .from('whatsapp_messages')
-          .select('phone, body, status, from_me')
+          .select('phone, body, status, from_me, timestamp')
           .in('phone', phones)
           .order('timestamp', { ascending: false })
-          .limit(phones.length);
+          .limit(phones.length * 2);
         if (data) {
-          const map = new Map<string, { body: string; status: string | null; fromMe: boolean }>();
+          const map = new Map(evoMap);
           for (const row of data) {
             if (!map.has(row.phone)) {
               map.set(row.phone, { body: row.body, status: row.status, fromMe: row.from_me });
@@ -535,7 +678,7 @@ export default function ChatPage() {
   useEffect(() => { if (status?.connected) loadChats(); else setChats([]); }, [status?.connected, loadChats]);
   useEffect(() => {
     if (!status?.connected) return;
-    const iv = setInterval(loadChats, 20000);
+    const iv = setInterval(loadChats, 8000);
     return () => clearInterval(iv);
   }, [status?.connected, loadChats]);
 
@@ -544,16 +687,13 @@ export default function ChatPage() {
     if (!status?.connected) return;
     setContactsLoading(true);
     try {
-      const res = await fetch('/api/zapi?action=contacts&page=1&pageSize=200');
-      if (res.ok) {
-        const data = await res.json();
-        const list = (Array.isArray(data) ? data : []).filter((c: ZApiChat) => {
-          const p = chatPhone(c);
-          return p && p !== '0' && !c.isGroup;
-        });
-        setContacts(list);
-        contactsLoadedRef.current = true;
-      }
+      const chatList = await findChats();
+      const list = (Array.isArray(chatList) ? chatList : []).filter((c: EvolutionChatItem) => {
+        const p = chatPhone(c);
+        return p && p !== '0' && !c.isGroup;
+      });
+      setContacts(list);
+      contactsLoadedRef.current = true;
     } catch { /* ignore */ }
     finally { setContactsLoading(false); }
   }, [status?.connected]);
@@ -574,7 +714,7 @@ export default function ChatPage() {
       return;
     }
     // Create a virtual chat entry
-    const newChat: ZApiChat = { phone: normalized, name: name || formatPhone(normalized) };
+    const newChat: EvolutionChatItem = { phone: normalized, name: name || formatPhone(normalized) };
     setChats(prev => [newChat, ...prev]);
     setSelectedChat(newChat);
     setSidebarTab('chats');
@@ -644,9 +784,9 @@ export default function ChatPage() {
     }]);
     setTimeout(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, 50);
     try {
-      const r = await sendDocument(phone, doc.arquivo_url, doc.arquivo_nome || `${doc.codigo}.pdf`);
+      const r = await sendMedia(phone, doc.arquivo_url, 'document', undefined, doc.arquivo_nome || `${doc.codigo}.pdf`);
       supabase.from('whatsapp_messages').insert({
-        message_id: r.messageId || r.zaapId || r.id || null,
+        message_id: r.key?.id || null,
         phone,
         from_me: true,
         timestamp: ts,
@@ -678,7 +818,7 @@ export default function ChatPage() {
     if (!digits || photoCache.has(digits) || photoLoadingRef.current.has(digits)) return;
     photoLoadingRef.current.add(digits);
     try {
-      const link = await getProfilePicture(digits);
+      const link = await fetchProfilePictureUrl(digits);
       setPhotoCache(prev => new Map(prev).set(digits, link));
     } catch {
       setPhotoCache(prev => new Map(prev).set(digits, null));
@@ -694,70 +834,122 @@ export default function ChatPage() {
     });
   }, [chats, status?.connected, loadPhoto, photoCache]);
 
-  /* ── sync Z-API messages to Supabase (Mimatour pattern) ── */
-  const syncZApiMessages = useCallback(async (phone: string, chatName: string) => {
-    try {
-      const res = await fetch(`/api/zapi?action=messages&phone=${phone}&amount=50`);
-      if (!res.ok) return;
-      const zapiMsgs = await res.json();
-      if (!Array.isArray(zapiMsgs) || zapiMsgs.length === 0) return;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const rows = zapiMsgs.filter((m: any) => m.messageId).map((m: any) => {
-        const text = m.text;
-        let body = '';
-        let msgType = 'text';
-        if (typeof text === 'object' && text) { body = text.message || ''; }
-        else if (typeof text === 'string') { body = text; }
-        if (m.image) { msgType = 'image'; body = m.image?.caption || body || ''; }
-        else if (m.document) { msgType = 'document'; body = m.document?.fileName ? `[Arquivo] ${m.document.fileName}` : body; }
-        else if (m.audio) { msgType = 'audio'; body = body || '[Audio]'; }
-        else if (m.video) { msgType = 'video'; body = m.video?.caption || '[Video]'; }
-        return {
-          message_id: String(m.messageId),
-          phone,
-          from_me: m.fromMe === true,
-          timestamp: Number(m.momment) || Number(m.timestamp) || Date.now(),
-          status: m.status || null,
-          sender_name: m.senderName || null,
-          chat_name: m.chatName || chatName || null,
-          body,
-          message_type: msgType,
-          raw: m,
-        };
-      });
-      if (rows.length > 0) {
-        await supabase.from('whatsapp_messages').upsert(rows, { onConflict: 'message_id' });
-      }
-    } catch { /* sync failed silently */ }
+  /* ── convert Evolution msg to WhatsAppMessage format ── */
+  const convertEvoMsg = useCallback((m: any, phone: string, chatName: string): WhatsAppMessage => {
+    const msg = m.message || {};
+    let body = '';
+    let msgType = 'text';
+    if (msg.conversation) { body = msg.conversation; }
+    else if (msg.extendedTextMessage?.text) { body = msg.extendedTextMessage.text; }
+    if (msg.imageMessage) { msgType = 'image'; body = msg.imageMessage?.caption || body || ''; }
+    else if (msg.documentMessage) { msgType = 'document'; body = msg.documentMessage?.fileName || body; }
+    else if (msg.audioMessage) { msgType = 'audio'; body = body || '[Audio]'; }
+    else if (msg.videoMessage) { msgType = 'video'; body = msg.videoMessage?.caption || '[Video]'; }
+    // Try all possible media URL field names Evolution v2 may return
+    const mediaUrl =
+      msg.imageMessage?.url || msg.imageMessage?.directPath || msg.imageMessage?.imageUrl ||
+      msg.videoMessage?.url || msg.videoMessage?.videoUrl ||
+      msg.audioMessage?.url || msg.audioMessage?.audioUrl ||
+      msg.documentMessage?.url || msg.documentMessage?.documentUrl ||
+      m.mediaUrl || null;
+    // Extract quoted/reply info
+    const quoted = msg.extendedTextMessage?.contextInfo?.quotedMessage;
+    const quotedId = msg.extendedTextMessage?.contextInfo?.stanzaId;
+    const replyData = quoted ? {
+      id: quotedId,
+      body: quoted.conversation || quoted.extendedTextMessage?.text || '',
+      from_me: msg.extendedTextMessage?.contextInfo?.participant?.includes(phone) ? false : true,
+      sender_name: '',
+    } : null;
+    return {
+      id: String(m.key.id),
+      created_at: new Date(Number(m.messageTimestamp) * 1000 || Date.now()).toISOString(),
+      message_id: String(m.key.id),
+      phone,
+      from_me: m.key.fromMe === true,
+      timestamp: Number(m.messageTimestamp) * 1000 || Date.now(),
+      status: m.status || null,
+      sender_name: m.pushName || null,
+      chat_name: chatName || null,
+      body,
+      message_type: msgType,
+      raw: {
+        ...(mediaUrl ? { _mediaUrl: mediaUrl } : {}),
+        ...(msg.documentMessage?.fileName ? { _fileName: msg.documentMessage.fileName } : {}),
+        ...(replyData ? { _reply: replyData } : {}),
+      },
+    } as WhatsAppMessage;
   }, []);
 
-  /* ── load messages: sync Z-API → read Supabase ── */
-  const loadMessages = useCallback(async (chat: ZApiChat, silent = false) => {
+  /* ── load messages: direct from Evolution, with Supabase merge for local media previews ── */
+  const loadMessages = useCallback(async (chat: EvolutionChatItem, silent = false) => {
     const p = canonize(toDigits(chatPhone(chat)));
     if (!p) return;
     if (!silent) { setMessagesLoading(true); }
 
-    // 1) Sync from Z-API to Supabase
-    await syncZApiMessages(p, chatLabel(chat));
-
-    // 2) Read from Supabase
     try {
-      const { data, error: err } = await supabase
+      // 1) Fetch directly from Evolution API (source of truth)
+      const evoMsgs = await findMessages(p, 100);
+      const evoConverted: WhatsAppMessage[] = (evoMsgs || [])
+        .filter((m: any) => m.key?.id)
+        .map((m: any) => convertEvoMsg(m, p, chatLabel(chat)));
+
+      // 2) Merge with Supabase (for local previews like sent images with _localPreview)
+      const { data: dbData } = await supabase
         .from('whatsapp_messages')
         .select('*')
         .eq('phone', p)
         .order('timestamp', { ascending: true })
         .limit(200);
-      if (!err && data && data.length > 0) {
-        setMessages(data as WhatsAppMessage[]);
-      } else {
-        if (!silent) setMessages([]);
+
+      const merged = new Map<string, WhatsAppMessage>();
+      // Evolution messages first (authoritative)
+      for (const m of evoConverted) merged.set(String(m.message_id), m);
+      // Supabase messages fill in local previews for msgs we sent
+      if (dbData) {
+        for (const row of dbData as WhatsAppMessage[]) {
+          const key = String(row.message_id);
+          if (merged.has(key)) {
+            const existing = merged.get(key)!;
+            const rawExisting = (existing.raw || {}) as Record<string, unknown>;
+            const rawDb = (row.raw || {}) as Record<string, unknown>;
+            // Prefer local preview over Evolution url (faster and avoids CORS)
+            if (rawDb._localPreview && !rawExisting._localPreview) {
+              existing.raw = { ...rawExisting, _localPreview: rawDb._localPreview };
+            }
+          } else {
+            // Supabase-only (e.g. optimistic msgs still not synced by Evolution)
+            merged.set(key, row);
+          }
+        }
       }
-    } catch {
+
+      const all = [...merged.values()].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+      setMessages(all);
+
+      // 3) Also upsert to Supabase in background (best effort, don't block)
+      if (evoConverted.length > 0) {
+        supabase.from('whatsapp_messages').upsert(
+          evoConverted.map(m => ({
+            message_id: m.message_id,
+            phone: m.phone,
+            from_me: m.from_me,
+            timestamp: m.timestamp,
+            status: m.status,
+            sender_name: m.sender_name,
+            chat_name: m.chat_name,
+            body: m.body,
+            message_type: m.message_type,
+            raw: m.raw,
+          })),
+          { onConflict: 'message_id' }
+        ).then(() => {});
+      }
+    } catch (e) {
       if (!silent) setMessages([]);
     }
     if (!silent) setMessagesLoading(false);
-  }, [syncZApiMessages]);
+  }, [convertEvoMsg]);
 
   useEffect(() => {
     if (selectedChat) {
@@ -802,7 +994,7 @@ export default function ChatPage() {
   // Poll for new messages
   useEffect(() => {
     if (!selectedChat || !status?.connected) return;
-    const iv = setInterval(() => loadMessages(selectedChat, true), 5000);
+    const iv = setInterval(() => loadMessages(selectedChat, true), 3000);
     return () => clearInterval(iv);
   }, [selectedChat ? chatId(selectedChat) : null, status?.connected, loadMessages]);
 
@@ -821,7 +1013,7 @@ export default function ChatPage() {
   }, [selectedChat ? chatId(selectedChat) : null, loadMessages]);
 
   /* ── Realtime: global unread ── */
-  const selectedChatRef = useRef<ZApiChat | null>(null);
+  const selectedChatRef = useRef<EvolutionChatItem | null>(null);
   useEffect(() => { selectedChatRef.current = selectedChat; }, [selectedChat]);
   useEffect(() => {
     const ch = supabase.channel('global-unread-certifica')
@@ -871,6 +1063,8 @@ export default function ChatPage() {
     const phone = canonize(toDigits(chatPhone(selectedChat)));
     const ts = Date.now();
     const tempId = `local-${ts}-${Math.random().toString(36).slice(2, 8)}`;
+    const replyMsgId = replyTo?.message_id && !replyTo.message_id.startsWith('local-') ? replyTo.message_id : undefined;
+    const replySnapshot = replyTo ? { id: replyTo.message_id, body: replyTo.body, from_me: replyTo.from_me, sender_name: replyTo.sender_name } : null;
     // Optimistic: add to UI immediately
     const tempMsg: WhatsAppMessage = {
       id: tempId,
@@ -884,14 +1078,15 @@ export default function ChatPage() {
       chat_name: chatLabel(selectedChat),
       body: text,
       message_type: 'text',
-      raw: {},
+      raw: replySnapshot ? { _reply: replySnapshot } : {},
     };
     setMessages(prev => [...prev, tempMsg]);
     setInputText('');
+    setReplyTo(null);
     setTimeout(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); inputRef.current?.focus(); }, 50);
     try {
-      const r = await sendText(phone, text);
-      const realId = r.messageId || r.zaapId || r.id || tempId;
+      const r = await sendText(phone, text, replyMsgId);
+      const realId = r.key?.id || tempId;
       // Save to Supabase — await to ensure it's there before next poll
       await supabase.from('whatsapp_messages').upsert({
         message_id: realId,
@@ -903,7 +1098,7 @@ export default function ChatPage() {
         chat_name: chatLabel(selectedChat),
         body: text,
         message_type: 'text',
-        raw: {},
+        raw: replySnapshot ? { _reply: replySnapshot } : {},
       }, { onConflict: 'message_id' });
       // Update temp message with real id
       setMessages(prev => prev.map(m => m.id === tempId ? { ...m, id: realId, message_id: realId } : m));
@@ -946,27 +1141,57 @@ export default function ChatPage() {
     try {
       const phone = canonize(toDigits(chatPhone(selectedChat)));
       for (const sf of pendingFiles) {
-        let r: ZApiSendResult;
-        if (sf.type === 'image') {
-          r = await sendImage(phone, sf.base64, sf.caption.trim() || undefined);
-        } else {
-          r = await sendDocument(phone, sf.base64, sf.file.name, sf.caption.trim() || undefined);
-        }
-        await supabase.from('whatsapp_messages').insert({
-          message_id: r.messageId || r.zaapId || r.id || null,
+        const ts = Date.now();
+        const tempId = `local-${ts}-${Math.random().toString(36).slice(2, 8)}`;
+        // Optimistic UI: show image preview immediately
+        const tempMsg: WhatsAppMessage = {
+          id: tempId,
+          created_at: new Date().toISOString(),
+          message_id: tempId,
           phone,
           from_me: true,
-          timestamp: Date.now(),
+          timestamp: ts,
           status: 'SENT',
           sender_name: '',
           chat_name: chatLabel(selectedChat),
           body: sf.caption.trim() || sf.file.name,
           message_type: sf.type,
-          raw: { _fileName: sf.file.name, _mimeType: sf.file.type },
-        });
+          raw: {
+            _fileName: sf.file.name,
+            _mimeType: sf.file.type,
+            _localPreview: sf.type === 'image' ? sf.base64 : null,
+          },
+        };
+        setMessages(prev => [...prev, tempMsg]);
+        setTimeout(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, 50);
+
+        let r: EvolutionSendResult;
+        if (sf.type === 'image') {
+          r = await sendMedia(phone, sf.base64, 'image', sf.caption.trim() || undefined, sf.file.name);
+        } else {
+          r = await sendMedia(phone, sf.base64, 'document', sf.caption.trim() || undefined, sf.file.name);
+        }
+        const realId = r.key?.id || tempId;
+        await supabase.from('whatsapp_messages').upsert({
+          message_id: realId,
+          phone,
+          from_me: true,
+          timestamp: ts,
+          status: 'SENT',
+          sender_name: '',
+          chat_name: chatLabel(selectedChat),
+          body: sf.caption.trim() || sf.file.name,
+          message_type: sf.type,
+          raw: {
+            _fileName: sf.file.name,
+            _mimeType: sf.file.type,
+            _localPreview: sf.type === 'image' ? sf.base64 : null,
+          },
+        }, { onConflict: 'message_id' });
+        // Update temp msg with real id
+        setMessages(prev => prev.map(m => m.id === tempId ? { ...m, id: realId, message_id: realId } : m));
       }
       setPendingFiles([]); setActiveFileIdx(0);
-      await loadMessages(selectedChat, true);
       setTimeout(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, 100);
     } catch (e) { setError(e instanceof Error ? e.message : 'Falha ao enviar.'); }
     finally { setSending(false); }
@@ -998,7 +1223,7 @@ export default function ChatPage() {
         const phone = canonize(toDigits(chatPhone(selectedChat)));
         const r = await sendAudio(phone, base64);
         await supabase.from('whatsapp_messages').insert({
-          message_id: r.messageId || r.zaapId || r.id || null,
+          message_id: r.key?.id || null,
           phone,
           from_me: true,
           timestamp: Date.now(),
@@ -1035,7 +1260,7 @@ export default function ChatPage() {
 
   const insertEmoji = (emoji: string) => { setInputText(t => t + emoji); inputRef.current?.focus(); };
 
-  const getPhoto = (chat: ZApiChat): string | null => {
+  const getPhoto = (chat: EvolutionChatItem): string | null => {
     const fromChat = chat.profileThumbnail;
     if (fromChat && fromChat !== 'null' && fromChat.trim()) return fromChat;
     const digits = toDigits(chatPhone(chat));
@@ -1086,23 +1311,66 @@ export default function ChatPage() {
   if (!status?.connected) return (
     <div className="flex h-full items-center justify-center bg-[#f0f4f8]">
       <div className="flex flex-col items-center gap-4 rounded-2xl bg-white p-10 shadow-sm max-w-md text-center">
-        <div className="w-16 h-16 rounded-full bg-[#2B8EAD]/10 flex items-center justify-center">
-          <Wifi className="h-8 w-8 text-[#2B8EAD]" />
-        </div>
-        <h2 className="text-lg font-semibold text-[#0F172A]">WhatsApp Desconectado</h2>
-        <p className="text-sm text-gray-500 leading-relaxed">
-          Configure as credenciais Z-API (ZAPI_INSTANCE_ID e ZAPI_TOKEN) nas variaveis de ambiente do Vercel e conecte seu WhatsApp.
-        </p>
-        {error && <p className="text-xs text-red-500">{error}</p>}
-        <button onClick={loadStatus} className="inline-flex items-center gap-2 rounded-lg bg-[#2B8EAD] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#1F7490] transition-colors">
-          <Wifi className="h-4 w-4" /> Tentar novamente
-        </button>
+
+        {/* QR code showing */}
+        {qrStatus === 'showing' && qrImage ? (
+          <>
+            <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center">
+              <QrCode className="h-7 w-7 text-amber-500" />
+            </div>
+            <h2 className="text-lg font-semibold text-[#0F172A]">Escaneie o QR Code</h2>
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <img src={qrImage} alt="QR Code" className="w-56 h-56" />
+            </div>
+            <div className="text-xs text-gray-500 space-y-0.5">
+              <p>1. Abra o WhatsApp no celular</p>
+              <p>2. Toque em <span className="font-medium">Dispositivos Vinculados</span></p>
+              <p>3. Toque em <span className="font-medium">Vincular Dispositivo</span></p>
+              <p>4. Aponte a camera para o QR code</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={handleRefreshQr} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                <RefreshCw className="h-3.5 w-3.5" /> Novo QR
+              </button>
+              <button onClick={() => { setQrStatus('idle'); setQrImage(null); if (qrPollRef.current) { clearInterval(qrPollRef.current); qrPollRef.current = null; } }}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                Cancelar
+              </button>
+            </div>
+            <div className="flex items-center gap-2 text-[10px] text-gray-400">
+              <div className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+              Aguardando conexao...
+            </div>
+          </>
+        ) : qrStatus === 'loading' ? (
+          <>
+            <Loader2 className="h-10 w-10 animate-spin text-[#2B8EAD]" />
+            <p className="text-sm text-gray-500">Gerando QR code...</p>
+          </>
+        ) : (
+          <>
+            <div className="w-16 h-16 rounded-full bg-[#2B8EAD]/10 flex items-center justify-center">
+              <Wifi className="h-8 w-8 text-[#2B8EAD]" />
+            </div>
+            <h2 className="text-lg font-semibold text-[#0F172A]">WhatsApp Desconectado</h2>
+            <p className="text-sm text-gray-500 leading-relaxed">
+              Conecte seu WhatsApp para enviar e receber mensagens.
+            </p>
+            {error && <p className="text-xs text-red-500">{error}</p>}
+            <button onClick={handleConnectWhatsApp} className="inline-flex items-center gap-2 rounded-lg bg-[#2B8EAD] px-6 py-3 text-sm font-medium text-white hover:bg-[#1F7490] transition-colors">
+              <QrCode className="h-4 w-4" /> Conectar WhatsApp
+            </button>
+            <button onClick={() => navigate('/configuracoes')} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+              Configurar Evolution API
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
 
   return (
-    <div className="flex h-full w-full bg-[#f0f4f8] overflow-hidden">
+    <div className="flex h-full w-full bg-[#f0f4f8] overflow-hidden certifica-page-enter">
       {/* ── SIDEBAR ── */}
       <aside className={`relative flex flex-col border-r border-gray-200 bg-white flex-shrink-0 ${selectedChat ? 'hidden md:flex w-[340px]' : 'w-full md:w-[340px] md:flex'}`}>
         {/* Header */}
@@ -1158,7 +1426,7 @@ export default function ChatPage() {
               const color = avatarColor(id);
               const phone = canonize(toDigits(chatPhone(chat)));
               const preview = lastMsgMap.get(phone);
-              const unread = Number(chat.unread || chat.messagesUnread || 0);
+              const unread = Number(chat.unread || 0);
               const isPinned = pinnedIds.has(id);
               const isFav = favoriteIds.has(id);
 
@@ -1168,8 +1436,8 @@ export default function ChatPage() {
                   onClick={() => {
                     setSelectedChat(chat);
                     if (unread > 0) {
-                      modifyChat(chatPhone(chat), 'read').catch(() => { });
-                      setChats(prev => prev.map(c => chatId(c) === id ? { ...c, unread: '0', messagesUnread: 0 } : c));
+                      // Mark as read locally (Evolution API requires message IDs for mark-as-read)
+                      setChats(prev => prev.map(c => chatId(c) === id ? { ...c, unread: 0 } : c));
                     }
                   }}
                   className={`w-full text-left flex items-center gap-3 px-3 py-3 border-b border-gray-100 transition-colors ${active ? 'bg-[#f0f2f5]' : 'hover:bg-[#f5f6f6]'}`}
@@ -1441,7 +1709,30 @@ export default function ChatPage() {
                         </span>
                       </div>
                     )}
-                    <div className={`flex mb-1 ${fromMe ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`group flex mb-1 items-center gap-1.5 ${fromMe ? 'justify-end' : 'justify-start'}`}>
+                      {/* Reply/Menu buttons (hover) — left side for incoming */}
+                      {!fromMe && (
+                        <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                          <button onClick={() => handleReplyMsg(msg)} title="Responder"
+                            className="p-1.5 rounded-full hover:bg-white/80 text-gray-500 hover:text-[#2B8EAD] bg-white/40 shadow-sm">
+                            <Reply className="w-3.5 h-3.5" />
+                          </button>
+                          <div className="relative" data-msg-menu>
+                            <button onClick={(e) => { e.stopPropagation(); setMsgMenuFor(msgMenuFor === String(msg.id) ? null : String(msg.id)); }}
+                              title="Mais" className="p-1.5 rounded-full hover:bg-white/80 text-gray-500 hover:text-gray-700 bg-white/40 shadow-sm">
+                              <MoreVertical className="w-3.5 h-3.5" />
+                            </button>
+                            {msgMenuFor === String(msg.id) && (
+                              <div className="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[180px]">
+                                <button onClick={() => handleDeleteForMe(msg)} className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-gray-700 hover:bg-gray-50 text-left">
+                                  <Trash2 className="w-3.5 h-3.5 text-gray-400" />Apagar so para mim
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       <div className={`relative max-w-[65%] px-2.5 py-1.5 rounded-lg shadow-sm ${fromMe ? 'bg-[#d4eaf5]' : 'bg-white'}`}
                         style={{ minWidth: 80 }}>
                         {/* Sender name for incoming */}
@@ -1449,25 +1740,61 @@ export default function ChatPage() {
                           <div className="text-[11px] font-semibold text-[#2B8EAD] mb-0.5">{msg.sender_name}</div>
                         )}
 
+                        {/* Reply quote */}
+                        {Boolean(raw._reply) && (
+                          <div className={`mb-1 px-2 py-1 rounded border-l-[3px] ${fromMe ? 'bg-black/5 border-[#2B8EAD]' : 'bg-gray-50 border-[#2B8EAD]'}`}>
+                            <p className="text-[10px] font-semibold text-[#2B8EAD]">
+                              {(raw._reply as any)?.from_me ? 'Voce' : (raw._reply as any)?.sender_name || 'Contato'}
+                            </p>
+                            <p className="text-[11px] text-gray-600 truncate">{((raw._reply as any)?.body || '').slice(0, 80)}</p>
+                          </div>
+                        )}
+
                         {/* Image messages */}
-                        {msg.message_type === 'image' && raw._localPreview && (
-                          <img src={raw._localPreview as string} alt="" className="rounded-md max-w-full max-h-60 mb-1" />
+                        {msg.message_type === 'image' && (raw._localPreview || raw._mediaUrl) && (
+                          <img
+                            src={(raw._localPreview as string) || (raw._mediaUrl as string)}
+                            alt=""
+                            className="rounded-md max-w-full max-h-60 mb-1 cursor-pointer"
+                            loading="lazy"
+                            onClick={() => {
+                              const url = (raw._localPreview as string) || (raw._mediaUrl as string);
+                              if (url) window.open(url, '_blank');
+                            }}
+                          />
+                        )}
+                        {msg.message_type === 'image' && !raw._localPreview && !raw._mediaUrl && (
+                          <div className="text-[11px] text-gray-400 italic">[Imagem — carregando...]</div>
+                        )}
+
+                        {/* Video messages */}
+                        {msg.message_type === 'video' && (raw._mediaUrl) && (
+                          <video controls className="rounded-md max-w-full max-h-60 mb-1" src={raw._mediaUrl as string} />
                         )}
 
                         {/* Document messages */}
                         {msg.message_type === 'document' && (
-                          <div className="flex items-center gap-2 bg-gray-50 rounded px-2 py-1.5 mb-1">
+                          <a
+                            href={(raw._mediaUrl as string) || undefined}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 bg-gray-50 rounded px-2 py-1.5 mb-1 hover:bg-gray-100"
+                          >
                             <FileText className="w-5 h-5 text-gray-500 flex-shrink-0" />
                             <span className="text-[12px] text-gray-700 truncate">{(raw._fileName as string) || 'Documento'}</span>
-                          </div>
+                          </a>
                         )}
 
                         {/* Audio messages */}
                         {msg.message_type === 'audio' && (
-                          <div className="flex items-center gap-2 py-0.5">
-                            <Mic className="w-4 h-4 text-[#2B8EAD]" />
-                            <span className="text-[12px] text-gray-600">{msg.body || 'Audio'}</span>
-                          </div>
+                          raw._mediaUrl ? (
+                            <audio controls className="max-w-[240px]" src={raw._mediaUrl as string} />
+                          ) : (
+                            <div className="flex items-center gap-2 py-0.5">
+                              <Mic className="w-4 h-4 text-[#2B8EAD]" />
+                              <span className="text-[12px] text-gray-600">{msg.body || 'Audio'}</span>
+                            </div>
+                          )
                         )}
 
                         {/* Text body */}
@@ -1481,6 +1808,32 @@ export default function ChatPage() {
                           {fromMe && <StatusTicks status={msg.status} />}
                         </div>
                       </div>
+
+                      {/* Reply/Menu buttons (hover) — right side for outgoing */}
+                      {fromMe && (
+                        <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                          <button onClick={() => handleReplyMsg(msg)} title="Responder"
+                            className="p-1.5 rounded-full hover:bg-white text-gray-500 hover:text-[#2B8EAD] bg-white/60 shadow-sm">
+                            <Reply className="w-3.5 h-3.5" />
+                          </button>
+                          <div className="relative" data-msg-menu>
+                            <button onClick={(e) => { e.stopPropagation(); setMsgMenuFor(msgMenuFor === String(msg.id) ? null : String(msg.id)); }}
+                              title="Mais" className="p-1.5 rounded-full hover:bg-white text-gray-500 hover:text-gray-700 bg-white/60 shadow-sm">
+                              <MoreVertical className="w-3.5 h-3.5" />
+                            </button>
+                            {msgMenuFor === String(msg.id) && (
+                              <div className="absolute right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[200px]">
+                                <button onClick={() => handleDeleteForMe(msg)} className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-gray-700 hover:bg-gray-50 text-left">
+                                  <Trash2 className="w-3.5 h-3.5 text-gray-400" />Apagar so para mim
+                                </button>
+                                <button onClick={() => handleDeleteForEveryone(msg)} className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-red-600 hover:bg-red-50 text-left">
+                                  <Trash2 className="w-3.5 h-3.5" />Apagar para todos
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -1554,6 +1907,27 @@ export default function ChatPage() {
                 <div className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded px-2.5 py-1.5 mb-2 flex items-center justify-between">
                   <span>{error}</span>
                   <button onClick={() => setError(null)}><X className="w-3.5 h-3.5" /></button>
+                </div>
+              )}
+
+              {/* Reply preview */}
+              {replyTo && (
+                <div className="flex items-start gap-2 bg-white border-l-[3px] border-[#2B8EAD] rounded px-2.5 py-1.5 mb-2">
+                  <Reply className="w-3.5 h-3.5 text-[#2B8EAD] mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-semibold text-[#2B8EAD]">
+                      Respondendo {replyTo.from_me ? 'voce mesmo' : replyTo.sender_name || chatLabel(selectedChat)}
+                    </p>
+                    <p className="text-[11px] text-gray-600 truncate">
+                      {replyTo.message_type === 'image' ? '📷 Imagem' :
+                       replyTo.message_type === 'document' ? '📄 Documento' :
+                       replyTo.message_type === 'audio' ? '🎤 Audio' :
+                       (replyTo.body || '').slice(0, 100)}
+                    </p>
+                  </div>
+                  <button onClick={() => setReplyTo(null)} className="p-1 rounded-full hover:bg-gray-100 text-gray-400 flex-shrink-0">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               )}
 

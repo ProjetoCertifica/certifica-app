@@ -253,7 +253,7 @@ export default function ProjetosPage() {
   }
 
   return (
-    <div className="flex h-full overflow-hidden">
+    <div className="flex h-full overflow-hidden certifica-page-enter">
       {/* ══════════════════════════════════════════════════════════
          Main content area
          ══════════════════════════════════════════════════════════ */}

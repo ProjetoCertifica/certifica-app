@@ -6,11 +6,23 @@ import { DSCard } from "../components/ds/DSCard";
 import { DSInput } from "../components/ds/DSInput";
 import { DSSelect } from "../components/ds/DSSelect";
 import { DSTextarea } from "../components/ds/DSTextarea";
-import { Bell, Camera, Database, Loader2, Lock, MessageCircle, RefreshCw, Save, Shield, Wifi, WifiOff, CalendarDays, CheckCircle2, XCircle, ExternalLink, UserCheck, UserX } from "lucide-react";
+import { Bell, Camera, Database, Loader2, Lock, MessageCircle, RefreshCw, Save, Shield, Wifi, WifiOff, CalendarDays, CheckCircle2, XCircle, ExternalLink, UserCheck, UserX, QrCode, Plug, Trash2 } from "lucide-react";
 import { useSettings } from "../lib/useSettings";
 import { useWhatsApp } from "../lib/useWhatsApp";
 import { useGoogleCalendar } from "../lib/useGoogleCalendar";
 import { supabase } from "../lib/supabase";
+import {
+  getEvolutionConfig,
+  clearConfigCache,
+  createInstance,
+  getQrCode,
+  getConnectionState,
+  logoutInstance,
+  deleteInstance,
+  type EvolutionQrCode,
+  type EvolutionConnectionState,
+  EvolutionNotConfiguredError,
+} from "../lib/evolution";
 
 /* ── User Avatar with Upload ── */
 function UserAvatar({ id, name, avatarUrl, onAvatarChange }: { id: string; name: string; avatarUrl?: string | null; onAvatarChange: (url: string) => void }) {
@@ -107,6 +119,284 @@ const tabs: { id: SettingsTab; label: string }[] = [
   { id: "integracoes", label: "Integrações" },
   { id: "logs", label: "Logs e auditoria" },
 ];
+
+/* ── WhatsApp via Evolution API ── */
+
+type EvolutionStep = "config" | "creating" | "qrcode" | "connected";
+
+function WhatsAppEvolutionCard() {
+  const [step, setStep] = useState<EvolutionStep>("config");
+  const [apiUrl, setApiUrl] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [instanceName, setInstanceName] = useState("certifica");
+  const [qrData, setQrData] = useState<EvolutionQrCode | null>(null);
+  const [connState, setConnState] = useState<string>("close");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Load saved config on mount
+  useEffect(() => {
+    (async () => {
+      clearConfigCache();
+      const cfg = await getEvolutionConfig();
+      if (cfg.url) setApiUrl(cfg.url);
+      if (cfg.apiKey) setApiKey(cfg.apiKey);
+      if (cfg.instance) setInstanceName(cfg.instance);
+      // If already configured, check connection
+      if (cfg.url && cfg.apiKey) {
+        try {
+          const state = await getConnectionState(cfg.instance);
+          setConnState(state.instance?.state ?? "close");
+          if (state.instance?.state === "open") setStep("connected");
+          else setStep("config");
+        } catch {
+          setStep("config");
+        }
+      }
+    })();
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, []);
+
+  // Save config to Supabase
+  const saveConfig = async () => {
+    if (!apiUrl || !apiKey) {
+      toast.error("Preencha a URL e API Key da Evolution API.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      for (const [key, value] of [
+        ["EVOLUTION_API_URL", apiUrl.replace(/\/$/, "")],
+        ["EVOLUTION_API_KEY", apiKey],
+        ["EVOLUTION_INSTANCE", instanceName || "certifica"],
+      ]) {
+        await supabase.from("app_settings").upsert({ key, value }, { onConflict: "key" });
+      }
+      clearConfigCache();
+      toast.success("Configuração salva!");
+    } catch (err: any) {
+      setError(err.message);
+      toast.error("Erro ao salvar: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Create instance + get QR code
+  const handleConnect = async () => {
+    setStep("creating");
+    setLoading(true);
+    setError(null);
+    try {
+      await saveConfig();
+      // Try to create instance (might already exist)
+      try {
+        await createInstance(instanceName);
+      } catch (err: any) {
+        // Instance may already exist — ignore 400/409
+        if (!err.message?.includes("400") && !err.message?.includes("409") && !err.message?.includes("already")) {
+          throw err;
+        }
+      }
+      // Fetch QR code
+      const qr = await getQrCode(instanceName);
+      setQrData(qr);
+      setStep("qrcode");
+      // Start polling connection state
+      startPolling();
+    } catch (err: any) {
+      setError(err.message);
+      setStep("config");
+      toast.error("Erro: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startPolling = () => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      try {
+        const state = await getConnectionState(instanceName);
+        const s = state.instance?.state ?? "close";
+        setConnState(s);
+        if (s === "open") {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setStep("connected");
+          toast.success("WhatsApp conectado!");
+        }
+      } catch { /* ignore polling errors */ }
+    }, 3000);
+  };
+
+  const handleDisconnect = async () => {
+    setLoading(true);
+    try {
+      await logoutInstance(instanceName);
+      setStep("config");
+      setConnState("close");
+      setQrData(null);
+      toast.info("WhatsApp desconectado.");
+    } catch (err: any) {
+      toast.error("Erro ao desconectar: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefreshQr = async () => {
+    setLoading(true);
+    try {
+      const qr = await getQrCode(instanceName);
+      setQrData(qr);
+      startPolling();
+    } catch (err: any) {
+      setError(err.message);
+      toast.error("Erro ao gerar QR: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <DSCard header={
+      <div className="flex items-center gap-2">
+        <MessageCircle className="w-4 h-4 text-green-600" />
+        <span className="text-[13px] text-certifica-900" style={{ fontWeight: 600 }}>WhatsApp via Evolution API</span>
+        {step === "connected" ? (
+          <DSBadge variant="conformidade" className="ml-auto">Conectado</DSBadge>
+        ) : step === "qrcode" ? (
+          <DSBadge variant="observacao" className="ml-auto">Aguardando QR Code</DSBadge>
+        ) : (
+          <DSBadge variant="outline" className="ml-auto">Não conectado</DSBadge>
+        )}
+      </div>
+    }>
+      <div className="space-y-3">
+        {/* ── CONNECTED STATE ── */}
+        {step === "connected" && (
+          <>
+            <div className="bg-green-50 border border-green-200 rounded-[4px] px-3 py-2 flex items-center gap-2">
+              <Wifi className="w-3.5 h-3.5 text-green-600" />
+              <div className="text-[11px] text-green-800">
+                <span style={{ fontWeight: 600 }}>WhatsApp conectado</span> · Instância: {instanceName}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <DSButton variant="outline" size="sm" icon={<RefreshCw className="w-3.5 h-3.5" />} onClick={async () => {
+                const state = await getConnectionState(instanceName);
+                setConnState(state.instance?.state ?? "close");
+                if (state.instance?.state === "open") toast.success("Ainda conectado!");
+                else { setStep("config"); toast.info("Conexão perdida."); }
+              }}>
+                Verificar status
+              </DSButton>
+              <DSButton variant="ghost" size="sm" icon={<WifiOff className="w-3.5 h-3.5" />} onClick={handleDisconnect} disabled={loading}>
+                Desconectar
+              </DSButton>
+              <span className="text-[10.5px] text-certifica-500">
+                Pronto para enviar mensagens, imagens e documentos
+              </span>
+            </div>
+          </>
+        )}
+
+        {/* ── QR CODE STATE ── */}
+        {step === "qrcode" && (
+          <>
+            <div className="bg-amber-50 border border-amber-200 rounded-[4px] px-3 py-2 flex items-start gap-2">
+              <QrCode className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="text-[11px] text-amber-800">
+                <span style={{ fontWeight: 600 }}>Escaneie o QR Code com seu WhatsApp</span>
+                <div className="text-[10px] mt-0.5">Abra o WhatsApp → Menu (⋮) → Aparelhos conectados → Conectar aparelho</div>
+              </div>
+            </div>
+            {qrData?.base64 && (
+              <div className="flex justify-center py-4">
+                <div className="bg-white border-2 border-certifica-200 rounded-lg p-3 shadow-sm">
+                  <img src={qrData.base64} alt="QR Code WhatsApp" className="w-[240px] h-[240px]" />
+                </div>
+              </div>
+            )}
+            <div className="flex items-center justify-center gap-2">
+              <DSButton variant="outline" size="sm" icon={<RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />} onClick={handleRefreshQr} disabled={loading}>
+                {loading ? "Gerando..." : "Novo QR Code"}
+              </DSButton>
+              <DSButton variant="ghost" size="sm" onClick={() => { if (pollRef.current) clearInterval(pollRef.current); setStep("config"); }}>
+                Cancelar
+              </DSButton>
+            </div>
+            <div className="text-center text-[10px] text-certifica-400">
+              Verificando conexão automaticamente a cada 3s...
+            </div>
+          </>
+        )}
+
+        {/* ── CONFIG / SETUP STATE ── */}
+        {(step === "config" || step === "creating") && (
+          <>
+            <div className="bg-certifica-50 border border-certifica-200 rounded-[4px] px-3 py-2 text-[11px] text-certifica-600 space-y-1">
+              <p style={{ fontWeight: 600 }}>Como configurar:</p>
+              <ol className="list-decimal list-inside space-y-0.5 text-[10.5px]">
+                <li>Faça deploy da Evolution API no <a href="https://railway.com/new/template/evolution-api-whatsapp-automation" target="_blank" rel="noopener noreferrer" className="text-certifica-accent underline">Railway (1 clique)</a></li>
+                <li>Copie a <span style={{ fontWeight: 600 }}>URL pública</span> do serviço e a <span style={{ fontWeight: 600 }}>API Key</span> configurada</li>
+                <li>Cole nos campos abaixo e clique em <span style={{ fontWeight: 600 }}>Conectar WhatsApp</span></li>
+                <li>Escaneie o QR Code com seu celular</li>
+              </ol>
+            </div>
+
+            <div className="space-y-2">
+              <DSInput
+                label="URL da Evolution API (Railway)"
+                value={apiUrl}
+                onChange={(e) => setApiUrl(e.target.value)}
+                placeholder="https://evolution-api-production-xxxx.up.railway.app"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <DSInput
+                  label="API Key"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="sua-api-key"
+                />
+                <DSInput
+                  label="Nome da instância"
+                  value={instanceName}
+                  onChange={(e) => setInstanceName(e.target.value)}
+                  placeholder="certifica"
+                />
+              </div>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-[4px] px-3 py-2 flex items-center gap-2">
+                <XCircle className="w-3.5 h-3.5 text-red-600 flex-shrink-0" />
+                <span className="text-[11px] text-red-700">{error}</span>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <DSButton
+                variant="primary"
+                size="sm"
+                icon={step === "creating" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plug className="w-3.5 h-3.5" />}
+                onClick={handleConnect}
+                disabled={loading || !apiUrl || !apiKey}
+              >
+                {step === "creating" ? "Conectando..." : "Conectar WhatsApp"}
+              </DSButton>
+              <DSButton variant="outline" size="sm" icon={<Save className="w-3.5 h-3.5" />} onClick={saveConfig} disabled={loading}>
+                Salvar config
+              </DSButton>
+            </div>
+          </>
+        )}
+      </div>
+    </DSCard>
+  );
+}
 
 const localRoleOptions: LocalRole[] = ["admin", "gestor", "consultor", "auditor", "cliente"];
 const modules = [
@@ -534,80 +824,8 @@ export default function ConfiguracoesPage() {
 
   const renderIntegracoes = () => (
     <div className="space-y-4">
-      {/* ── Z-API / WhatsApp — painel de configuração ── */}
-      <DSCard header={
-        <div className="flex items-center gap-2">
-          <MessageCircle className="w-4 h-4 text-green-600" />
-          <span className="text-[13px] text-certifica-900" style={{ fontWeight: 600 }}>WhatsApp via Z-API</span>
-          {whatsApp.status?.connected ? (
-            <DSBadge variant="conformidade" className="ml-auto">Conectado</DSBadge>
-          ) : whatsApp.statusError ? (
-            <DSBadge variant="nao-conformidade" className="ml-auto">Erro</DSBadge>
-          ) : (
-            <DSBadge variant="outline" className="ml-auto">Não configurado</DSBadge>
-          )}
-        </div>
-      }>
-        <div className="space-y-3">
-          {/* Status info */}
-          {whatsApp.status?.connected && (
-            <div className="bg-green-50 border border-green-200 rounded-[4px] px-3 py-2 flex items-center gap-2">
-              <Wifi className="w-3.5 h-3.5 text-green-600" />
-              <div className="text-[11px] text-green-800">
-                <span style={{ fontWeight: 600 }}>Conectado</span> · Número: {whatsApp.status.phone ?? "—"} · {whatsApp.status.name ?? ""}
-                {whatsApp.status.battery != null && ` · Bateria: ${whatsApp.status.battery}%`}
-              </div>
-            </div>
-          )}
-          {!whatsApp.status?.connected && !whatsApp.statusLoading && (
-            <div className="bg-amber-50 border border-amber-200 rounded-[4px] px-3 py-2 flex items-start gap-2">
-              <WifiOff className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
-              <div className="text-[11px] text-amber-800 space-y-1">
-                <div style={{ fontWeight: 600 }}>Configuração do WhatsApp:</div>
-                <ol className="list-decimal list-inside space-y-0.5 text-[10.5px]">
-                  <li>Crie uma instância no Z-API</li>
-                  <li>Configure o Instance ID e o Token no painel de administração</li>
-                  <li>Clique em <span style={{ fontWeight: 600 }}>Testar conexão</span> para verificar</li>
-                </ol>
-              </div>
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex items-center gap-2">
-            <DSButton
-              variant="outline"
-              size="sm"
-              icon={<RefreshCw className={`w-3.5 h-3.5 ${whatsApp.statusLoading ? "animate-spin" : ""}`} />}
-              onClick={async () => {
-                const s = await whatsApp.checkStatus();
-                if (s?.connected) {
-                  toast.success("WhatsApp conectado com sucesso!");
-                } else if (whatsApp.statusError) {
-                  toast.error("Erro ao conectar: " + whatsApp.statusError);
-                } else {
-                  toast.info("Z-API não configurado. Siga as instruções acima.");
-                }
-              }}
-            >
-              {whatsApp.statusLoading ? "Verificando..." : "Testar conexão"}
-            </DSButton>
-            {whatsApp.status?.connected && (
-              <span className="text-[10.5px] text-certifica-500">
-                Pronto para enviar mensagens, imagens e documentos via WhatsApp
-              </span>
-            )}
-          </div>
-
-          {/* WhatsApp config info */}
-          <div className="bg-certifica-50 border border-certifica-200 rounded-[4px] px-3 py-2">
-            <div className="text-[10px] text-certifica-500" style={{ fontWeight: 600 }}>Configuração do WhatsApp</div>
-            <div className="text-[10px] text-certifica-500 mt-1">
-              O Instance ID e o Token do Z-API devem ser configurados pelo administrador do sistema.
-            </div>
-          </div>
-        </div>
-      </DSCard>
+      {/* ── Evolution API / WhatsApp — QR Code connection ── */}
+      <WhatsAppEvolutionCard />
 
       {/* ── Google Calendar via Recall.ai ── */}
       <DSCard header={

@@ -459,8 +459,8 @@ function Modal({ title, onClose, children, width = 480 }: { title: string; onClo
   useBodyScrollLock(true);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ animation: "certifica-fade-in 150ms ease-out" }}>
-      <div className="absolute inset-0 bg-certifica-dark/40" onClick={onClose} />
-      <div className="relative bg-white rounded-[6px] border border-certifica-200 shadow-xl flex flex-col max-h-[85vh]" style={{ width, animation: "certifica-scale-in 200ms cubic-bezier(.22,1,.36,1)" }}>
+      <div className="absolute inset-0 bg-certifica-dark/40 certifica-modal-backdrop" onClick={onClose} />
+      <div className="relative bg-white rounded-[6px] border border-certifica-200 shadow-xl flex flex-col max-h-[85vh] certifica-modal-content" style={{ width, animation: "certifica-scale-in 200ms cubic-bezier(.22,1,.36,1)" }}>
         <div className="px-5 py-3.5 border-b border-certifica-200 flex items-center justify-between flex-shrink-0">
           <span className="text-[14px] text-certifica-900" style={{ fontWeight: 600 }}>{title}</span>
           <button onClick={onClose} className="p-1 text-certifica-500/40 hover:text-certifica-dark transition-colors cursor-pointer">
@@ -687,8 +687,8 @@ function CardDetailPanel({ card, colTitle, colColor, onClose, onRemove }: {
 
   return (
     <>
-      <div className="fixed inset-0 bg-certifica-dark/30 z-40" onClick={onClose} style={{ animation: "certifica-fade-in 150ms ease-out" }} />
-      <div className="fixed top-0 right-0 h-full w-[420px] bg-white shadow-[-4px_0_24px_rgba(0,0,0,0.08)] z-50 flex flex-col" style={{ animation: "certifica-slide-right 250ms cubic-bezier(.22,1,.36,1)" }}>
+      <div className="fixed inset-0 bg-certifica-dark/30 z-40 certifica-modal-backdrop" onClick={onClose} style={{ animation: "certifica-fade-in 150ms ease-out" }} />
+      <div className="fixed top-0 right-0 h-full w-[420px] bg-white shadow-[-4px_0_24px_rgba(0,0,0,0.08)] z-50 flex flex-col certifica-modal-slide" style={{ animation: "certifica-slide-right 250ms cubic-bezier(.22,1,.36,1)" }}>
         <div className="px-5 py-3.5 border-b border-certifica-200 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: colColor }} />

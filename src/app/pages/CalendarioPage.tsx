@@ -500,7 +500,7 @@ export default function CalendarioPage() {
 
   /* ── Connected: full calendar ── */
   return (
-    <div className="flex h-full min-h-0">
+    <div className="flex h-full min-h-0 certifica-page-enter">
       {/* ── Calendar panel ── */}
       <div className="flex-1 flex flex-col min-w-0 p-6 overflow-hidden">
         {/* Tabs + Month navigation header */}

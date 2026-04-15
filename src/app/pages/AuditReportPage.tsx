@@ -1124,8 +1124,8 @@ export default function AuditReportPage() {
       {/* Modal de confirmação de exclusão */}
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !deleting && setConfirmDelete(false)} />
-          <div className="relative bg-white rounded-lg shadow-2xl border border-certifica-200 w-full max-w-[420px] mx-4 p-6 animate-in fade-in zoom-in-95 duration-200">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm certifica-modal-backdrop" onClick={() => !deleting && setConfirmDelete(false)} />
+          <div className="relative bg-white rounded-lg shadow-2xl border border-certifica-200 w-full max-w-[420px] mx-4 p-6 certifica-modal-content">
             <div className="flex items-center gap-3 mb-4">
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-100">
                 <Trash2 className="w-5 h-5 text-red-600" strokeWidth={1.5} />

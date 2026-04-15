@@ -156,12 +156,12 @@ export default function LoginPage() {
       {/* Card */}
       <div className="relative w-full max-w-[400px] px-4">
         {/* Logo */}
-        <div className="flex justify-center mb-8">
-          <img src={logoImg} alt="Certifica" className="h-[36px] w-auto brightness-0 invert" />
+        <div className="flex justify-center mb-8 certifica-logo-reveal">
+          <img src={logoImg} alt="Certifica" className="h-[36px] w-auto brightness-0 invert certifica-logo-glow" />
         </div>
 
         <div
-          className="bg-white rounded-[8px] overflow-hidden shadow-2xl"
+          className="bg-white rounded-[8px] overflow-hidden shadow-2xl certifica-login-card"
           style={{ boxShadow: "0 24px 80px rgba(0,0,0,0.4)" }}
         >
           {/* Card header */}

@@ -1626,8 +1626,8 @@ function CardDetailOverlay({
 
   return (
     <div className="fixed inset-0 z-50 flex" style={{ animation: "overlayFadeIn .25s ease-out" }}>
-      <div className="absolute inset-0 bg-certifica-dark/50" onClick={onClose} style={{ animation: "overlayBackdrop .3s ease-out" }} />
-      <div className="relative ml-auto bg-white w-full max-w-[1080px] h-full flex flex-col shadow-[-4px_0_24px_rgba(0,0,0,0.08)]" style={{ animation: "overlaySlideIn .3s cubic-bezier(.22,1,.36,1)" }}>
+      <div className="absolute inset-0 bg-certifica-dark/50 certifica-modal-backdrop" onClick={onClose} style={{ animation: "overlayBackdrop .3s ease-out" }} />
+      <div className="relative ml-auto bg-white w-full max-w-[1080px] h-full flex flex-col shadow-[-4px_0_24px_rgba(0,0,0,0.08)] certifica-modal-slide" style={{ animation: "overlaySlideIn .3s cubic-bezier(.22,1,.36,1)" }}>
         <div className="px-5 py-3 border-b border-certifica-200 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
             <span className="text-[10px] text-certifica-accent font-mono px-1.5 py-0.5 bg-certifica-accent-light rounded-[2px]" style={{ fontWeight: 600 }}>{card.codigo}</span>

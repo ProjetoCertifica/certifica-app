@@ -52,11 +52,16 @@ interface PropostaForm {
   titulo: string;
   norma: string;
   escopo: string;
+  descricaoProjeto: string;
+  modalidade: string;
   diasEstimados: number;
+  valorDiario: number;
   valorTotal: number;
   parcelas: number;
   condicoes: string;
   validadeDias: number;
+  premissa: string;
+  restricao: string;
   consultor: string;
   observacoes: string;
   etapas: string[];
@@ -77,11 +82,16 @@ const emptyForm: PropostaForm = {
   titulo: "",
   norma: "",
   escopo: "",
-  diasEstimados: 90,
+  descricaoProjeto: "",
+  modalidade: "PRESENCIAL",
+  diasEstimados: 10,
+  valorDiario: 0,
   valorTotal: 0,
   parcelas: 1,
-  condicoes: "",
-  validadeDias: 15,
+  condicoes: "60 dias da NF",
+  validadeDias: 30,
+  premissa: "Disponibilização das equipes para apoio na implementação. Cumprimento do plano.",
+  restricao: "Internet, acidentes, doença.",
   consultor: "",
   observacoes: "",
   etapas: [...ETAPAS_DEFAULT],
@@ -100,13 +110,11 @@ export default function PropostasPage() {
   const [form, setForm] = useState<PropostaForm>({ ...emptyForm });
   const [preview, setPreview] = useState<PropostaData | null>(null);
 
-  /* next proposal number */
+  /* next proposal number — format: NNN-YYYY (e.g. 155-2026) */
   const nextNumero = useMemo(() => {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const year = new Date().getFullYear();
     const seq = String(projetos.length + 1).padStart(3, "0");
-    return `PROP-${y}${m}-${seq}`;
+    return `${seq}-${year}`;
   }, [projetos.length]);
 
   /* fetch projects (all statuses, to allow generating proposals for any) */
@@ -171,7 +179,8 @@ export default function PropostasPage() {
       const valor = parseValorBR(p.valor);
       const diasMatch = p.previsao && p.inicio
         ? Math.max(1, Math.round((new Date(p.previsao).getTime() - new Date(p.inicio).getTime()) / 86400000))
-        : 90;
+        : 10;
+      const valorDiario = diasMatch > 0 ? Math.round((valor / diasMatch) * 100) / 100 : 0;
 
       setForm((f) => ({
         ...f,
@@ -180,10 +189,13 @@ export default function PropostasPage() {
         titulo: `${p.codigo} — ${p.titulo}`,
         norma: p.norma,
         escopo: p.escopo,
+        descricaoProjeto: p.escopo, // default: copia do escopo
+        modalidade: "PRESENCIAL",
         diasEstimados: diasMatch,
+        valorDiario,
         valorTotal: valor,
         parcelas: 1,
-        condicoes: p.condicoes_pagamento,
+        condicoes: p.condicoes_pagamento || "60 dias da NF",
         consultor: p.consultor,
         observacoes: "",
         etapas: [...ETAPAS_DEFAULT],
@@ -213,6 +225,10 @@ export default function PropostasPage() {
     const now = new Date();
     const validade = new Date(now.getTime() + form.validadeDias * 86400000);
 
+    const computedTotal = form.valorDiario > 0
+      ? Math.round(form.valorDiario * form.diasEstimados * 100) / 100
+      : form.valorTotal;
+
     const data: PropostaData = {
       numero: form.numero || nextNumero,
       data: now.toISOString().split("T")[0],
@@ -230,12 +246,17 @@ export default function PropostasPage() {
       titulo: form.titulo,
       norma: form.norma,
       escopo: form.escopo,
+      descricaoProjeto: form.descricaoProjeto || form.escopo,
+      modalidade: form.modalidade,
       diasEstimados: form.diasEstimados,
       etapas: form.etapas.filter(Boolean),
-      valorTotal: form.valorTotal,
+      valorDiario: form.valorDiario,
+      valorTotal: computedTotal,
       parcelas: form.parcelas,
-      valorParcela: form.parcelas > 0 ? Math.round((form.valorTotal / form.parcelas) * 100) / 100 : form.valorTotal,
+      valorParcela: form.parcelas > 0 ? Math.round((computedTotal / form.parcelas) * 100) / 100 : computedTotal,
       condicoes: form.condicoes,
+      premissa: form.premissa,
+      restricao: form.restricao,
       consultor: form.consultor,
       observacoes: form.observacoes,
     };
@@ -262,7 +283,7 @@ export default function PropostasPage() {
   }
 
   return (
-    <div className="p-5 space-y-4">
+    <div className="p-5 space-y-4 certifica-page-enter">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -362,8 +383,8 @@ export default function PropostasPage() {
       {/* Form Modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-certifica-dark/45" onClick={() => setShowForm(false)} />
-          <div className="relative w-full max-w-[680px] bg-white border border-certifica-200 rounded-[6px] shadow-[0_12px_40px_rgba(14,42,71,0.18)] max-h-[90vh] overflow-y-auto">
+          <div className="absolute inset-0 bg-certifica-dark/45 certifica-modal-backdrop" onClick={() => setShowForm(false)} />
+          <div className="relative w-full max-w-[680px] bg-white border border-certifica-200 rounded-[6px] shadow-[0_12px_40px_rgba(14,42,71,0.18)] max-h-[90vh] overflow-y-auto certifica-modal-content">
             {/* Modal header */}
             <div className="px-4 py-3 border-b border-certifica-200 flex items-center justify-between sticky top-0 bg-white z-10">
               <h3 className="text-[15px] text-certifica-900" style={{ fontWeight: 600 }}>Configurar Proposta</h3>
@@ -389,13 +410,25 @@ export default function PropostasPage() {
                 <DSInput label="Titulo" value={form.titulo} onChange={(e) => updateField("titulo", e.target.value)} />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-4 gap-3">
                 <DSInput label="Norma" value={form.norma} onChange={(e) => updateField("norma", e.target.value)} placeholder="ISO 9001:2015" />
+                <DSSelect
+                  label="Modalidade"
+                  value={form.modalidade}
+                  onChange={(e) => updateField("modalidade", e.target.value)}
+                  options={[
+                    { value: "PRESENCIAL", label: "Presencial" },
+                    { value: "REMOTO", label: "Remoto" },
+                    { value: "HIBRIDO", label: "Híbrido" },
+                  ]}
+                />
                 <DSInput label="Dias estimados" type="number" value={String(form.diasEstimados)} onChange={(e) => updateField("diasEstimados", Number(e.target.value) || 0)} />
                 <DSInput label="Consultor" value={form.consultor} onChange={(e) => updateField("consultor", e.target.value)} />
               </div>
 
-              <DSTextarea label="Escopo dos servicos" value={form.escopo} onChange={(e) => updateField("escopo", e.target.value)} rows={3} placeholder="Descreva o escopo dos servicos..." />
+              <DSTextarea label="Escopo (título grande da capa)" value={form.escopo} onChange={(e) => updateField("escopo", e.target.value)} rows={2} placeholder="Ex: Implementação ISO 14001:2015 - Sistema de Gestão Ambiental" />
+
+              <DSTextarea label="Descrição do projeto (aparece na página de etapas)" value={form.descricaoProjeto} onChange={(e) => updateField("descricaoProjeto", e.target.value)} rows={3} placeholder="Consultoria para implementação do Sistema de Gestão..." />
 
               {/* Etapas */}
               <div>
@@ -423,17 +456,30 @@ export default function PropostasPage() {
 
               {/* Financeiro */}
               <div className="grid grid-cols-3 gap-3">
-                <DSInput label="Valor total (R$)" type="number" value={String(form.valorTotal)} onChange={(e) => updateField("valorTotal", Number(e.target.value) || 0)} />
-                <DSInput label="Parcelas" type="number" value={String(form.parcelas)} onChange={(e) => updateField("parcelas", Math.max(1, Number(e.target.value) || 1))} />
+                <DSInput
+                  label="Valor diário (R$/dia)"
+                  type="number"
+                  value={String(form.valorDiario)}
+                  onChange={(e) => updateField("valorDiario", Number(e.target.value) || 0)}
+                  placeholder="Ex: 1650"
+                />
                 <div>
-                  <label className="text-[11px] text-certifica-500 block mb-1">Valor por parcela</label>
+                  <label className="text-[11px] text-certifica-500 block mb-1">Valor total (calculado)</label>
                   <div className="h-[34px] px-2 flex items-center text-[13px] font-mono text-certifica-900 bg-certifica-50 border border-certifica-200 rounded-[4px]" style={{ fontWeight: 600 }}>
-                    {form.parcelas > 0 ? currency(Math.round((form.valorTotal / form.parcelas) * 100) / 100) : "—"}
+                    {form.valorDiario > 0
+                      ? currency(Math.round(form.valorDiario * form.diasEstimados * 100) / 100)
+                      : form.valorTotal > 0 ? currency(form.valorTotal) : "—"}
                   </div>
                 </div>
+                <DSInput label="Parcelas" type="number" value={String(form.parcelas)} onChange={(e) => updateField("parcelas", Math.max(1, Number(e.target.value) || 1))} />
               </div>
 
-              <DSInput label="Condicoes de pagamento" value={form.condicoes} onChange={(e) => updateField("condicoes", e.target.value)} placeholder="Ex: 30/60/90 dias, boleto bancario" />
+              <DSInput label="Condicoes de pagamento" value={form.condicoes} onChange={(e) => updateField("condicoes", e.target.value)} placeholder="Ex: 60 dias da NF" />
+
+              <div className="grid grid-cols-2 gap-3">
+                <DSInput label="Premissa" value={form.premissa} onChange={(e) => updateField("premissa", e.target.value)} placeholder="Disponibilização das equipes..." />
+                <DSInput label="Restrição" value={form.restricao} onChange={(e) => updateField("restricao", e.target.value)} placeholder="Internet, acidentes, doença." />
+              </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <DSInput label="Validade (dias)" type="number" value={String(form.validadeDias)} onChange={(e) => updateField("validadeDias", Number(e.target.value) || 15)} />

@@ -578,7 +578,7 @@ export default function AppLayout() {
               transition: `width ${TRANSITION}`,
             }}
           >
-            <img src={logoImg} alt="Certifica Gestão de Sistemas" className="h-[30px] w-auto max-w-none" />
+            <img src={logoImg} alt="Certifica Gestão de Sistemas" className="h-[30px] w-auto max-w-none certifica-logo-reveal" />
           </div>
           {isMobile && (
             <button
@@ -886,10 +886,10 @@ export default function AppLayout() {
         {helpOpen && (
           <>
             <div
-              className="fixed inset-0 bg-black/20 z-40 transition-opacity"
+              className="fixed inset-0 bg-black/20 z-40 transition-opacity certifica-modal-backdrop"
               onClick={() => setHelpOpen(false)}
             />
-            <div className="fixed top-0 right-0 h-full w-[320px] sm:w-[380px] bg-white shadow-2xl z-50 flex flex-col animate-in slide-in-from-right duration-200">
+            <div className="fixed top-0 right-0 h-full w-[320px] sm:w-[380px] bg-white shadow-2xl z-50 flex flex-col certifica-modal-slide">
               <div className="flex items-center justify-between px-5 py-4 border-b border-certifica-200">
                 <span className="text-[14px] text-certifica-dark" style={{ fontWeight: 600 }}>
                   Central de Ajuda
@@ -958,8 +958,8 @@ export default function AppLayout() {
       {/* ── Create Pipeline Modal ── */}
       {showCreatePipeline && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ animation: "certifica-modal-fade 150ms ease-out" }}>
-          <div className="absolute inset-0 bg-certifica-dark/40" onClick={() => setShowCreatePipeline(false)} />
-          <div className="relative bg-white rounded-[6px] border border-certifica-200 shadow-xl w-[440px] flex flex-col" style={{ animation: "certifica-modal-scale 200ms cubic-bezier(.22,1,.36,1)" }}>
+          <div className="absolute inset-0 bg-certifica-dark/40 certifica-modal-backdrop" onClick={() => setShowCreatePipeline(false)} />
+          <div className="relative bg-white rounded-[6px] border border-certifica-200 shadow-xl w-[440px] flex flex-col certifica-modal-content" style={{ animation: "certifica-modal-scale 200ms cubic-bezier(.22,1,.36,1)" }}>
             <div className="px-5 py-3.5 border-b border-certifica-200 flex items-center justify-between">
               <span className="text-[14px] text-certifica-900" style={{ fontWeight: 600 }}>Criar pipeline</span>
               <button onClick={() => setShowCreatePipeline(false)} className="p-1 text-certifica-500/40 hover:text-certifica-dark transition-colors cursor-pointer">

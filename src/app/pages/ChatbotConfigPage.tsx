@@ -438,8 +438,8 @@ export default function ChatbotConfigPage() {
       {/* New Agent Modal */}
       {showNewAgent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-certifica-dark/45" onClick={() => setShowNewAgent(false)} />
-          <div className="relative w-full max-w-[400px] bg-white border border-certifica-200 rounded-[8px] shadow-[0_12px_40px_rgba(14,42,71,0.18)]">
+          <div className="absolute inset-0 bg-certifica-dark/45 certifica-modal-backdrop" onClick={() => setShowNewAgent(false)} />
+          <div className="relative w-full max-w-[400px] bg-white border border-certifica-200 rounded-[8px] shadow-[0_12px_40px_rgba(14,42,71,0.18)] certifica-modal-content">
             <div className="px-5 py-4 border-b border-certifica-200">
               <h3 className="text-[15px] text-certifica-900" style={{ fontWeight: 600 }}>Novo Agente IA</h3>
             </div>
